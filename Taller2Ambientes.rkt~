@@ -242,9 +242,9 @@
   (lambda (element stack)
     (lambda (id)
       (cond
-        [(eqv? id 1) stack]
-        [(eqv? id 2) element]
-        [(eqv? id 3) (empty-stackP id)]))))
+        [(eqv? id 1) (cdr stack)]
+        [(eqv? id 2) (car stack)]
+        [(eqv? id 3) 'vacio]))))
 
 (define stackPushP
   (pushP 'a
