@@ -148,5 +148,107 @@
 
 ;-------------------------------------------------------------------------------
 ;punto 3
+;----------------------------------------------
+;LISTAS
+;----------------------------------------------
+;Definicion pila vacía
+(define empty-stack
+  (lambda () (list 'empty-stack)))
 
 
+;Push=>Insertar elemento en una pila
+
+;Insertarlo al final
+(define push-final
+  (lambda (element stack)
+    (cond
+      [(empty-stack? stack) (cons element (empty-stack))]
+      [else (cons (car stack) (push-final element (cdr stack)))])))
+
+;Insertarlo al inicio
+(define push
+  (lambda (element stack)
+    (cond
+      [(empty-stack? stack) (cons element (empty-stack))]
+      [else (cons element stack)])))
+
+;Pop=>Retira el elemento superior de la pila
+(define pop
+  (lambda (stack)
+    (cond
+      [(empty-stack? stack) '()]
+      [else (cdr stack)])))
+
+;Top=>Devuelve el elemento superior de la pila sin retirarlo
+(define top
+  (lambda (stack)
+    (cond
+      [(empty-stack? stack) '()]
+      [else (car stack)])))
+
+
+
+
+
+;Observador empty-satck? Predicado que se encarga de preguntar
+;si la pila está vacía 
+(define empty-stack?
+  (lambda (stack)
+    (if (eqv? (car stack) 'empty-stack)
+        #t #f))) 
+
+
+;Pruebas
+(define stack1 (list 3 3 3 4 52 1 'empty-stack))
+(push 'x stack1)
+
+(define stackPush
+  (push 'a
+              (push 'b
+                          (push 'c
+                                      (push 'd
+                                                  (empty-stack))))))
+
+(pop stackPush)
+(top stackPush)
+(empty-stack? stack1)
+
+
+;----------------------------------------------
+;PROCEDIMIENTOS
+;----------------------------------------------
+
+(define popP
+  (lambda (stack)
+    (stack 1)))
+
+(define topP
+  (lambda (stack)
+    (stack 2)))
+
+(define empty-stackP?
+  (lambda (stack)
+    (stack 3)))
+
+(define empty-stackP
+  (lambda ()
+    (lambda (id)
+      (cond
+        [(or (eqv? id 1) (eqv? id 2))'()]
+        [(eqv? id 3) 'error]))))
+
+
+(define pushP
+  (lambda (element stack)
+    (lambda (id)
+      (cond
+        [(eqv? id 1) (cdr stack)]
+        [(eqv? id 2) (car stack)]
+        [(eqv? id 3) 'vacio]))))
+
+(define stackPushP
+  (pushP 'a
+              (pushP 'b
+                          (pushP 'c
+                                      (pushP 'd
+                                                  (empty-stackP))))))
