@@ -82,7 +82,7 @@
 (define-datatype sumaAnidada sumaAnidada?
   (valorType (x number?))
   (sumaType (x number?) (body sumaAnidada?))
- )
+  )
 
 ;Unparse y Parse
 
@@ -100,10 +100,10 @@
       [(number? (valor->numero dato)) (valorType (valor->numero dato))]
       [(pair? dato)
        (if  (eqv? (car dato) 'sumaAnidada)
-           (sumaType (cadr(valor->numero dato))
-                     (parse (caddr dato)))
-           ('invalido)
-           )]
+            (sumaType (cadr(valor->numero dato))
+                      (parse (caddr dato)))
+            ('invalido)
+            )]
       (else 'invalido))))
 
 ;codigo cliente
@@ -137,8 +137,8 @@
 
 (define a
   (sumaType 4        
-        (sumaType 5 (valorType 6) )
-        ))
+            (sumaType 5 (valorType 6) )
+            ))
 
 (define listaA '(sumaAnidada (valor 4) (sumaAnidada (valor 5) (valor 6))))
 
@@ -157,13 +157,6 @@
 
 
 ;Push=>Insertar elemento en una pila
-
-;Insertarlo al final
-(define push-final
-  (lambda (element stack)
-    (cond
-      [(empty-stack? stack) (cons element (empty-stack))]
-      [else (cons (car stack) (push-final element (cdr stack)))])))
 
 ;Insertarlo al inicio
 (define push
@@ -204,10 +197,10 @@
 
 (define stackPush
   (push 'a
-              (push 'b
-                          (push 'c
-                                      (push 'd
-                                                  (empty-stack))))))
+        (push 'b
+              (push 'c
+                    (push 'd
+                          (empty-stack))))))
 
 (pop stackPush)
 (top stackPush)
@@ -248,7 +241,64 @@
 
 (define stackPushP
   (pushP 'a
-              (pushP 'b
-                          (pushP 'c
-                                      (pushP 'd
-                                                  (empty-stackP))))))
+         (pushP 'b
+                (pushP 'c
+                       (pushP 'd
+                              (empty-stackP))))))
+
+;-------------------------------------------------------------------------------
+;punto 4
+;-------------------------------------------------------------------------------
+;LISTAS
+;----------------------------------------------
+;Definicion pila vacía
+
+(define empty-tree
+  (lambda () (list 'empty-tree)))
+
+
+
+(define extract-node
+  (lambda (tree)
+    (car tree)))
+
+(define extract-izq
+  (lambda (tree)
+    (cadr tree)))
+
+(define extract-der
+  (lambda (tree)
+    (caddr tree)))
+
+(define empty-tree?
+  (lambda (tree)
+    (null? tree)))
+
+(define leaf-tree?
+  (lambda (tree)
+    (and (not (empty-tree? tree))
+         (empty-tree? (extract-izq tree))
+         (empty-tree? (extract-der tree)))
+    )
+  )
+
+(define node-tree?
+  (lambda (tree)
+    (not (and (empty-tree? (extract-izq tree))
+              (empty-tree? (extract-der tree)))
+         )
+    )
+  )
+
+(define validador-orden
+  (lambda (tree)
+    (cond [(or (empty-tree? tree)
+               (leaf-tree? tree)) #t]
+          [else (and (validador-orden (extract-izq tree)) 
+                     (validador-orden (extract-der tree))
+                     ()
+                     ())]
+          )
+    )
+  )
+
