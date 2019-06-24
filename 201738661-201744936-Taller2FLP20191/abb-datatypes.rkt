@@ -7,9 +7,9 @@
 
 (define-datatype treeType treeType?
   (empty-treeType)
-  (insertar-elemento (node number?)
-                     (treeIzq treeType?)
-                     (treeDer treeType?))
+  (node (value number?)
+        (treeIzq treeType?)
+        (treeDer treeType?))
   )
 
 
@@ -18,8 +18,8 @@
     (cases treeType tree
       (empty-treeType ()
                       #t)
-      (insertar-elemento (node treeIzq treeDer)
-                         #f))
+      (node (value treeIzq treeDer)
+            #f))
     )
   )
 
@@ -28,8 +28,8 @@
     (cases treeType tree
       (empty-treeType ()
                       "The tree is null")
-      (insertar-elemento (node treeIzq treeDer)
-                         node))
+      (node (value treeIzq treeDer)
+            value))
     )
   )
 
@@ -38,8 +38,8 @@
     (cases treeType tree
       (empty-treeType ()
                       "The tree is null")
-      (insertar-elemento (node treeIzq treeDer)
-                         treeIzq))
+      (node (value treeIzq treeDer)
+            treeIzq))
     )
   )
 
@@ -48,8 +48,8 @@
     (cases treeType tree
       (empty-treeType ()
                       "The tree is null")
-      (insertar-elemento (node treeIzq treeDer)
-                         treeDer))
+      (node (value treeIzq treeDer)
+            treeDer))
     )
   )
 
@@ -58,10 +58,10 @@
     (cases treeType tree
       (empty-treeType ()
                       #t)
-      (insertar-elemento (node treeIzq treeDer)
-                         (cond [(and (empty-treeType? treeIzq)
-                                     (empty-treeType? treeDer)) #t]
-                               [else #f]))
+      (node (value treeIzq treeDer)
+            (cond [(and (empty-treeType? treeIzq)
+                        (empty-treeType? treeDer)) #t]
+                  [else #f]))
       )
     )
   )
@@ -71,10 +71,10 @@
     (cases treeType tree
       (empty-treeType ()
                       #f)
-      (insertar-elemento (node treeIzq treeDer)
-                         (cond [(or (empty-treeType? treeIzq)
-                                    (empty-treeType? treeDer)) #f]
-                               [else #t]))
+      (node (value treeIzq treeDer)
+            (cond [(or (empty-treeType? treeIzq)
+                       (empty-treeType? treeDer)) #f]
+                  [else #t]))
       )
     )
   )
@@ -83,8 +83,38 @@
   (lambda (tree)
     (cases treeType tree
       (empty-treeType ()
-                      #f)
-      (insertar-elemento (node treeIzq treeDer)
-                         treeDer))
+                      #t)
+      (node (value treeIzq treeDer)
+            treeDer))
+    )
+  )
+
+(define unparseTree
+  (lambda (tree)
+    (cases treeType tree
+      (empty-treeType ()
+                      '(emptyTreeList))
+      (node (value treeIzq treeDer)
+            (list 'value value 'leftTree (unparseTree treeIzq) 'rightTree (unparseTree treeDer))))
+    )
+  )
+
+(define parseTree
+  (lambda (dato)
+    (if (and (not (null? dato))
+             (not (null? (cdr dato)))
+             (not (null? (cddr dato)))
+             (null? (cdddr dato)))
+        (cond
+          [(eqv? (car dato) 'emptyTreeList) (empty-treeType)]
+          [(and (eqv? (car dato) 'value)
+                (eqv? (caddr dato) 'leftTree)
+                (eqv? (caddr (cddr dato)) 'rightTree))
+           (node
+            (cadr dato)
+            (parseTree (caddr (cdr dato)))
+            (parseTree (caddr (cdddr dato))))]
+          [else 'Invalido])
+        'Invalido)
     )
   )
