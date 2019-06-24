@@ -67,7 +67,7 @@
                                     [else (and (<= (car lista) (cadr lista))
                                                (validar-orden (cdr lista)))])
                               )]
-             [main (validar-orden (treeToList tree))])
+             [main (treeToList tree)])
       main)
     )
   )
@@ -80,6 +80,8 @@
           [else (cons (extract-node tree) (list (insertar-elemento (extract-izq tree) numero) (extract-der tree)))]) 
     )
   )
+
+
 
 (define arbol1 (list 5 (empty-tree)
                        (empty-tree)))
