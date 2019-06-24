@@ -1,4 +1,6 @@
-//Encabezado
+#lang eopl
+
+;Encabezado
 
 ;Punto 1
 
