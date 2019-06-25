@@ -81,11 +81,20 @@
 
 (define validador-orden
   (lambda (tree)
-    (cases treeType tree
-      (empty-treeType ()
-                      #t)
-      (node (value treeIzq treeDer)
-            treeDer))
+    (letrec ([treeToList (cases treeType tree
+                           (empty-treeType ()
+                                           empty)
+                           (node (value treeIzq treeDer)
+                                 (append (treeToList treeIzq) (list value) (treeToList treeDer)))
+                           )]
+             [validar-orden (lambda (lista)
+                              (cond [(or (null? lista)
+                                         (null? (cdr lista))) #t]
+                                    [else (and (<= (car lista) (cadr lista))
+                                               (validar-orden (cdr lista)))])
+                              )]
+             [main (validar-orden (treeToList tree))])
+      main)
     )
   )
 
