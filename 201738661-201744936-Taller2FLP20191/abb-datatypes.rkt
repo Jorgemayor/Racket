@@ -12,9 +12,20 @@
 ; Codigo: 201744936
 
 ;-------------------------------------------------------------------------------
+;GRAMATIC
+;-------------------------------------------------------------------------------
+
+;<treeType> ::= (empty-treeType)
+;           ::= (<int> <treeType> <treeType>)
+
+;-------------------------------------------------------------------------------
 ;DATATYPES
 ;-------------------------------------------------------------------------------
 
+;The datatype "treeType" is defined, with the constructors
+;"empty-treeType", that defines an empty tree and "node", that
+;defines a treeType with branches, that are also treeTypes.
+;Treetype defined an abstract syntax tree.
 (define-datatype treeType treeType?
   (empty-treeType)
   (node (value number?)
@@ -22,7 +33,39 @@
         (treeDer treeType?))
   )
 
+;-------------------------------------------------------------------------------
 
+;TreeType instantiations
+(define treeType1 (node 3 (empty-treeType) (empty-treeType)))
+
+(define treeType2 (node 3 (node -1 (node -3 (empty-treeType)
+                                      (node 3 (empty-treeType)
+                                            (empty-treeType)))
+                             (node 0 (empty-treeType)
+                                   (empty-treeType)))
+                     (node 3 (empty-treeType)
+                           (empty-treeType))))
+
+(define treeType3 (node 3 (node -1 (node -3 (empty-treeType)
+                                      (node -2 (empty-treeType)
+                                            (empty-treeType)))
+                             (node 0 (empty-treeType)
+                                   (empty-treeType)))
+                     (node 3 (empty-treeType)
+                           (empty-treeType))))
+
+;Pruebas treeType?
+(treeType? (empty-treeType))
+(treeType? treeType1)
+(treeType? treeType2)
+
+;-------------------------------------------------------------------------------
+
+;empty-treeType?: tree {treeType}
+;                 -> {boolean}
+;Purpose:
+;Returns true if a treeType is an empty-treeType (with no nodes),
+;false otherwise.
 (define empty-treeType?
   (lambda (tree)
     (cases treeType tree
@@ -33,6 +76,17 @@
     )
   )
 
+;Pruebas
+(empty-treeType? (empty-treeType))
+(empty-treeType? treeType1)
+
+;-------------------------------------------------------------------------------
+
+;extract-node: tree {treeType}
+;              -> {boolean} | {string}
+;Purpose:
+;Returns the node of the treeType given.
+;If the tree is an empty-treeType, returns "The tree is null".
 (define extract-node
   (lambda (tree)
     (cases treeType tree
@@ -43,6 +97,18 @@
     )
   )
 
+;Pruebas
+(extract-node treeType1)
+(extract-node treeType2)
+(extract-node treeType3)
+
+;-------------------------------------------------------------------------------
+
+;extract-izq: tree {treeType}
+;             -> {boolean} | {string}
+;Purpose:
+;Returns the left branch of the treeType given.
+;If the tree is an empty-treeType, returns "The tree is null".
 (define extract-izq
   (lambda (tree)
     (cases treeType tree
@@ -53,6 +119,17 @@
     )
   )
 
+;Pruebas
+(extract-izq treeType1)
+(extract-izq treeType2)
+
+;-------------------------------------------------------------------------------
+
+;extract-der: tree {treeType}
+;             -> {boolean} | {string}
+;Purpose:
+;Returns the right branch of the treeType given.
+;If the tree is an empty-treeType, returns "The tree is null".
 (define extract-der
   (lambda (tree)
     (cases treeType tree
@@ -63,11 +140,23 @@
     )
   )
 
+;Pruebas
+(extract-der treeType1)
+(extract-der treeType2)
+
+;-------------------------------------------------------------------------------
+
+;leaf-tree?: tree {treeType}
+;            -> {boolean}
+;Purpose:
+;Returns true if the treeType given is a leaf, false
+;otherwise.
+;An empty-treeType is not taken as a leaf.
 (define leaf-tree?
   (lambda (tree)
     (cases treeType tree
       (empty-treeType ()
-                      #t)
+                      #f)
       (node (value treeIzq treeDer)
             (cond [(and (empty-treeType? treeIzq)
                         (empty-treeType? treeDer)) #t]
@@ -76,6 +165,18 @@
     )
   )
 
+;Pruebas
+(leaf-tree? treeType1)
+(leaf-tree? treeType3)
+
+;-------------------------------------------------------------------------------
+;node-tree?: tree {treeType}
+;            -> {boolean}
+;Purpose:
+;Returns true if the treeType given is a node, false
+;otherwise.
+;If a treeType has at least one treeType on its
+;branches, is taken as a node.
 (define node-tree?
   (lambda (tree)
     (cases treeType tree
@@ -89,6 +190,19 @@
     )
   )
 
+;Pruebas
+(node-tree? treeType1)
+(node-tree? treeType3)
+
+;-------------------------------------------------------------------------------
+;validador-orden: tree {treeType}
+;                 -> {boolean}
+;Purpose:
+;Validates if a given treeType is a well ordered tree, so all the values on the left
+;branch of a treeType must be smaller than the value in the node.
+;The values on the left branch must be bigger than the value in the node.
+;At first, the function transforms the treeType into a list and then, validates the
+;order of the numbers in this list.
 (define validador-orden
   (lambda (tree)
     (letrec ([treeToList (lambda (tree)
@@ -110,6 +224,17 @@
     )
   )
 
+;Pruebas
+(validador-orden treeType1)
+(validador-orden treeType2)
+(validador-orden treeType3)
+
+;-------------------------------------------------------------------------------
+;unparseTree: tree {treeType}
+;             -> {list}
+;Purpose:
+;Takes a treeType and unparses it into a list, analyzing
+;each case of the gramatic.
 (define unparseTree
   (lambda (tree)
     (cases treeType tree
@@ -120,12 +245,28 @@
     )
   )
 
+;Pruebas
+(unparseTree treeType1)
+(unparseTree treeType2)
+(unparseTree treeType3)
+
+;-------------------------------------------------------------------------------
+;parseTree: dato {list}
+;           -> {treeType}
+;Purpose:
+;Takes a list and parses it into an abstract syntax tree,
+;defined by treeType; analyzing if the list given fixes with
+;the definition of the datatype.
 (define parseTree
   (lambda (dato)
-    (if (and (not (null? dato))
-             (not (null? (cdr dato)))
-             (not (null? (cddr dato)))
-             (null? (cdddr dato)))
+    (if (or  (eqv? (car dato) 'emptyTreeList)
+             (and (not (null? dato))
+                  (not (null? (cdr dato)))
+                  (not (null? (cddr dato)))
+                  (not (null? (cdddr dato)))
+                  (not (null? (cddddr dato)))
+                  (not (null? (cddr (cdddr dato))))
+                  (null? (cdddr (cdddr dato)))))
         (cond
           [(eqv? (car dato) 'emptyTreeList) (empty-treeType)]
           [(and (eqv? (car dato) 'value)
@@ -140,20 +281,7 @@
     )
   )
 
-(define arbol1 (node 3 (empty-treeType) (empty-treeType)))
-
-(define arbol2 (node 3 (node -1 (node -3 (empty-treeType)
-                                         (node 3 (empty-treeType)
-                                                 (empty-treeType)))
-                                (node 0 (empty-treeType)
-                                        (empty-treeType)))
-                       (node 3 (empty-treeType)
-                               (empty-treeType))))
-
-(define arbol3 (node 3 (node -1 (node -3 (empty-treeType)
-                                         (node -2 (empty-treeType)
-                                                  (empty-treeType)))
-                                (node 0 (empty-treeType)
-                                        (empty-treeType)))
-                       (node 3 (empty-treeType)
-                               (empty-treeType))))
+;Pruebas
+(parseTree (unparseTree treeType1))
+(parseTree (unparseTree treeType2))
+(parseTree (unparseTree treeType3))
