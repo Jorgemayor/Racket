@@ -32,7 +32,7 @@
     )
   )
 
-;Prueba:
+;Pueba:
 (empty-tree)
 
 ;-------------------------------------------------------------------------------
@@ -61,7 +61,7 @@
 ;empty-tree: {tree}
 ;            -> {boolean}
 ;Purpose:
-;Returns true if the given tree is an empty-tree, false otherwise.
+;Returns true if the tree given is an empty-tree, false otherwise.
 (define empty-tree?
   (lambda (tree)
     (eqv? (car tree) (car (empty-tree)))
@@ -76,8 +76,8 @@
 ;make-tree: number {int}
 ;           -> {list}
 ;Purpose:
-;Makes a tree with the value and, the left and right
-;given trees.
+;Makes a tree with the value and the left and right
+;trees given.
 (define make-tree
   (lambda (number leftTree rightTree)
     (list number leftTree rightTree)
@@ -93,14 +93,14 @@
 ;extract-node: tree {list}
 ;              -> {int}
 ;Purpose:
-;Extracts the value (node) of a given tree.
+;Extracts the value (node) of a tree given.
 (define extract-node
   (lambda (tree)
     (car tree)
     )
   )
 
-;Pruebas:
+;Pruebas
 (extract-node (make-tree 4 (empty-tree) (empty-tree)))
 (extract-node tree1)
 
@@ -108,14 +108,14 @@
 ;extract-izq: tree {list}
 ;             -> {list}
 ;Purpose:
-;Extracts the left tree of a given tree.
+;Extracts the left tree of a tree given.
 (define extract-izq
   (lambda (tree)
     (cadr tree)
     )
   )
 
-;Pruebas:
+;Pruebas
 (extract-izq tree1)
 (extract-izq tree2)
 
@@ -123,14 +123,14 @@
 ;extract-der: tree {list}
 ;             -> {list}
 ;Purpose:
-;Extracts the right tree of a given tree.
+;Extracts the right tree of a tree given.
 (define extract-der
   (lambda (tree)
     (caddr tree)
     )
   )
 
-;Pruebas:
+;Pruebas
 (extract-der tree1)
 (extract-der tree2)
 
@@ -138,7 +138,7 @@
 ;leaf-tree?: tree {list}
 ;           -> {list}
 ;Purpose:
-;Returns true if the given tree is a leaf, false
+;Returns true if the tree given is a leaf, false
 ;otherwise.
 ;An empty-tree is not taken as a leaf.
 (define leaf-tree?
@@ -157,7 +157,7 @@
 ;node-tree?: tree {list}
 ;            -> {boolean}
 ;Purpose:
-;Returns true if the given tree is a node, false
+;Returns true if the tree given is a node, false
 ;otherwise.
 ;If a tree has at least one tree on its branches,
 ;is taken as a node.
@@ -228,7 +228,7 @@
     )
   )
 
-;Pruebas:
+;Pruebas
 (insertar-elemento tree1 3)
 (insertar-elemento tree2 4)
 (insertar-elemento tree3 1)

@@ -23,10 +23,9 @@
 ;-------------------------------------------------------------------------------
 
 ;The datatype "treeType" is defined, with the constructors
-;"empty-treeType"; that defines an empty tree and "node"; that
+;"empty-treeType", that defines an empty tree and "node", that
 ;defines a treeType with branches, that are also treeTypes.
 ;Treetype defined an abstract syntax tree.
-;treeType?: Validates if the given data is a treeType.
 (define-datatype treeType treeType?
   (empty-treeType)
   (node (value number?)
@@ -86,7 +85,7 @@
 ;extract-node: tree {treeType}
 ;              -> {boolean} | {string}
 ;Purpose:
-;Returns the node of the given treeType.
+;Returns the node of the treeType given.
 ;If the tree is an empty-treeType, returns "The tree is null".
 (define extract-node
   (lambda (tree)
@@ -108,7 +107,7 @@
 ;extract-izq: tree {treeType}
 ;             -> {boolean} | {string}
 ;Purpose:
-;Returns the left branch of the given treeType.
+;Returns the left branch of the treeType given.
 ;If the tree is an empty-treeType, returns "The tree is null".
 (define extract-izq
   (lambda (tree)
@@ -129,7 +128,7 @@
 ;extract-der: tree {treeType}
 ;             -> {boolean} | {string}
 ;Purpose:
-;Returns the right branch of the given treeType.
+;Returns the right branch of the treeType given.
 ;If the tree is an empty-treeType, returns "The tree is null".
 (define extract-der
   (lambda (tree)
@@ -150,7 +149,7 @@
 ;leaf-tree?: tree {treeType}
 ;            -> {boolean}
 ;Purpose:
-;Returns true if the given treeType is a leaf, false
+;Returns true if the treeType given is a leaf, false
 ;otherwise.
 ;An empty-treeType is not taken as a leaf.
 (define leaf-tree?
@@ -174,7 +173,7 @@
 ;node-tree?: tree {treeType}
 ;            -> {boolean}
 ;Purpose:
-;Returns true if the given treeType is a node, false
+;Returns true if the treeType given is a node, false
 ;otherwise.
 ;If a treeType has at least one treeType on its
 ;branches, is taken as a node.
@@ -199,7 +198,7 @@
 ;validador-orden: tree {treeType}
 ;                 -> {boolean}
 ;Purpose:
-;Validates if the given treeType is a well ordered tree, so all the values on the left
+;Validates if a given treeType is a well ordered tree, so all the values on the left
 ;branch of a treeType must be smaller than the value in the node.
 ;The values on the left branch must be bigger than the value in the node.
 ;At first, the function transforms the treeType into a list and then, validates the
@@ -256,7 +255,7 @@
 ;           -> {treeType}
 ;Purpose:
 ;Takes a list and parses it into an abstract syntax tree,
-;defined by treeType; analyzing if the given list fixes with
+;defined by treeType; analyzing if the list given fixes with
 ;the definition of the datatype.
 (define parseTree
   (lambda (dato)
