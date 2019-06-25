@@ -1,19 +1,44 @@
-;Encabezado
+#lang eopl
+
+; Taller 2 Fundamentos de lenguaje de programacion
+; 
+; pilas-datatypes.rkt
+; 
+; Desarrolladores:
+; 
+; Jorge Eduardo Mayor Fernandez
+; Codigo: 201738661
+; 
+; Juan Sebastian Velasquez Acevedo
+; Codigo: 201744936
+
+
+;-------------------------------------------------------------------------------
+;GRAMATIC 
+;------------------------------------------------------------------------------
+
+;;  <stack>     ::= empty-stack
+;;              ::= (push <scheme-value> <stack>)
 
 ;----------------------------------------------
 ;DATATYPES
 ;----------------------------------------------
-;Defino tipo de dato stack por Datatype con los constructores
-;empty-stackType y pushType
+;;empty-stackP: stack {procedure}
+;;      -> '() || String || boolean
+;;Purpose:Define stack data type by Datatype with the constructors
+; empty-stackType and pushType
 (define-datatype stackType stackType?
   (empty-stackType)
   (pushType (element scheme-value?)
             (stackBody stackType?))
   )
 
+;Determine what is a scheme value
 (define scheme-value? (lambda (v) #t))
 
-;Funciones de observadores, en este caso son extractores
+;;topP: topType 
+;;      -> String || element
+;;Purpose: Returns the top element of the stack without removing it with cases
 (define topType
   (lambda (stack)
     (cases stackType stack
@@ -23,6 +48,9 @@
                 element)
       )))
 
+; ;popP: popType
+; ;      -> stackType
+; ;Purpose:Remove the top element from the stack with cases
 (define popType
   (lambda (stack)
     (cases stackType stack
@@ -32,6 +60,9 @@
                 stackBody)
       )))
 
+;; empty-stackType?: stack 
+;;      -> boolean
+;;Purpose:Determines if a stack is empty with cases
 (define empty-stackType?
   (lambda (stack)
     (cases stackType stack
@@ -63,6 +94,11 @@
 
 ;UNPARSE Y PARSE
 
+;unparseStack: stack {stackType}
+;             -> {list}
+;Purpose:
+;Takes a stackType and unparses it into a list, analyzing
+;each case of the gramatic.
 (define unparseStack
   (lambda (stack)
     (cases stackType stack
@@ -74,6 +110,13 @@
     )
   )
 
+
+;parseStack: stack {list}
+;           -> {stackType}
+;Purpose:
+;Takes a list and parses it into an abstract syntax tree,
+;defined by stackType; analyzing if the given list fixes with
+;the definition of the datatype.
 (define parseStack
   (lambda (dato)
     (if (pair? dato)
