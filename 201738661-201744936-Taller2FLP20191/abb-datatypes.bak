@@ -15,8 +15,8 @@
 ;GRAMATIC
 ;-------------------------------------------------------------------------------
 
-;<binary-tree> ::= (empty-tree) empty
-;              ::= (node) <int> <binary-tree> <binary-tree>
+;<treeType> ::= (empty-treeType)
+;           ::= (<int> <treeType> <treeType>)
 
 ;-------------------------------------------------------------------------------
 ;DATATYPES

@@ -15,62 +15,62 @@
 ;GRAMATIC
 ;-------------------------------------------------------------------------------
 
-;<binary-tree> ::= (empty-tree) empty
-;              ::= (node) <int> <binary-tree> <binary-tree>
+;<tree> ::= (empty-tree)
+;       ::= (<int> <tree> <tree>)
 
 ;-------------------------------------------------------------------------------
 ;LISTS
 ;-------------------------------------------------------------------------------
 
-;arbol-vacio: {void}
-;             -> {list}
+;empty-tree: {void}
+;            -> {list}
 ;Purpose:
-;Returns a list with an 'arbol-vacio.
-(define arbol-vacio
+;Returns a list with an 'empty-tree.
+(define empty-tree
   (lambda ()
-    (list 'arbol-vacio)
+    (list 'empty-tree)
     )
   )
 
 ;Prueba:
-(arbol-vacio)
+(empty-tree)
 
 ;-------------------------------------------------------------------------------
 ;Tree instantiations
 
-(define tree1 (list 5 (arbol-vacio)
-                    (arbol-vacio)))
+(define tree1 (list 5 (empty-tree)
+                    (empty-tree)))
 
-(define tree2 (list 5 (list 9 (arbol-vacio)
-                            (list 5 (arbol-vacio)
-                                  (arbol-vacio)))
-                    (list 1 (list 3 (arbol-vacio)
-                                  (arbol-vacio))
-                          (list 0 (arbol-vacio)
-                                (arbol-vacio)))))
+(define tree2 (list 5 (list 9 (empty-tree)
+                            (list 5 (empty-tree)
+                                  (empty-tree)))
+                    (list 1 (list 3 (empty-tree)
+                                  (empty-tree))
+                          (list 0 (empty-tree)
+                                (empty-tree)))))
 
-(define tree3 (list 5 (list 1 (list 0 (arbol-vacio)
-                                    (arbol-vacio))
-                            (list 3 (arbol-vacio)
-                                  (arbol-vacio)))
-                    (list 9 (arbol-vacio)
-                          (list 10 (arbol-vacio)
-                                (arbol-vacio)))))
+(define tree3 (list 5 (list 1 (list 0 (empty-tree)
+                                    (empty-tree))
+                            (list 3 (empty-tree)
+                                  (empty-tree)))
+                    (list 9 (empty-tree)
+                          (list 10 (empty-tree)
+                                (empty-tree)))))
 
 ;-------------------------------------------------------------------------------
-;arbol-vacio: {tree}
+;empty-tree: {tree}
 ;            -> {boolean}
 ;Purpose:
-;Returns true if the given tree is an arbol-vacio, false otherwise.
-(define arbol-vacio?
+;Returns true if the given tree is an empty-tree, false otherwise.
+(define empty-tree?
   (lambda (tree)
-    (eqv? (car tree) (car (arbol-vacio)))
+    (eqv? (car tree) (car (empty-tree)))
     )
   )
 
 ;Pruebas:
-(arbol-vacio? (arbol-vacio))
-(arbol-vacio? tree1)
+(empty-tree? (empty-tree))
+(empty-tree? tree1)
 
 ;-------------------------------------------------------------------------------
 ;make-tree: number {int}
@@ -85,9 +85,9 @@
   )
 
 ;Pruebas:
-(make-tree 4 (arbol-vacio) (arbol-vacio))
-(make-tree 4 (make-tree 3 (arbol-vacio) (arbol-vacio))
-           (make-tree 5 (arbol-vacio) (arbol-vacio)))
+(make-tree 4 (empty-tree) (empty-tree))
+(make-tree 4 (make-tree 3 (empty-tree) (empty-tree))
+           (make-tree 5 (empty-tree) (empty-tree)))
 
 ;-------------------------------------------------------------------------------
 ;extract-node: tree {list}
@@ -101,7 +101,7 @@
   )
 
 ;Pruebas:
-(extract-node (make-tree 4 (arbol-vacio) (arbol-vacio)))
+(extract-node (make-tree 4 (empty-tree) (empty-tree)))
 (extract-node tree1)
 
 ;-------------------------------------------------------------------------------
@@ -140,12 +140,12 @@
 ;Purpose:
 ;Returns true if the given tree is a leaf, false
 ;otherwise.
-;An arbol-vacio is not taken as a leaf.
+;An empty-tree is not taken as a leaf.
 (define leaf-tree?
   (lambda (tree)
-    (and (not (arbol-vacio? tree))
-         (arbol-vacio? (extract-izq tree))
-         (arbol-vacio? (extract-der tree)))
+    (and (not (empty-tree? tree))
+         (empty-tree? (extract-izq tree))
+         (empty-tree? (extract-der tree)))
     )
   )
 
@@ -163,8 +163,8 @@
 ;is taken as a node.
 (define node-tree?
   (lambda (tree)
-    (not (and (arbol-vacio? (extract-izq tree))
-              (arbol-vacio? (extract-der tree)))
+    (not (and (empty-tree? (extract-izq tree))
+              (empty-tree? (extract-der tree)))
          )
     )
   )
@@ -185,7 +185,7 @@
 (define validador-orden
   (lambda (tree)
     (letrec ([treeToList (lambda (tree)
-                           (cond [(arbol-vacio? tree) empty]
+                           (cond [(empty-tree? tree) empty]
                                  [else (append (treeToList (extract-izq tree)) (list (extract-node tree)) (treeToList (extract-der tree)))])
                            )]
              [validar-orden (lambda (lista)
@@ -216,7 +216,7 @@
 (define insertar-elemento
   (lambda (tree number)
     (letrec ([insertar (lambda (tree)
-                         (cond [(arbol-vacio? tree) (make-tree number (arbol-vacio) (arbol-vacio))]
+                         (cond [(empty-tree? tree) (make-tree number (empty-tree) (empty-tree))]
                                [(= (extract-node tree) number) tree]
                                [(< (extract-node tree) number) (cons (extract-node tree) (list (extract-izq tree) (insertar (extract-der tree))))]
                                [else (cons (extract-node tree) (list (insertar (extract-izq tree)) (extract-der tree)))])
