@@ -40,7 +40,7 @@
     (number
      ("-" digit "." (arbno digit)) number)
     (text
-     ((arbno letter digit)) string))
+     ((arbno letter)) string))
   )
 
 ;Syntactic specification (grammar)
@@ -57,7 +57,7 @@
     (primitive ("*") mult)
     (primitive ("/") div)
     (primitive ("concat") concat)
-    (primitive ("size") size)
+    (primitive ("lengt") lengt)
     )
   )
 
@@ -129,34 +129,31 @@
 ; lista de operandos (expresiones)
 (define eval-rands
   (lambda (rands)
-    (map (lambda (x) (eval-rand x)) rands)
-    )
-  )
+    (map (lambda (x) (eval-rand x)) rands)))
 
 (define eval-rand
   (lambda (rand)
-    (eval-expression rand)
-    )
-  )
+    (eval-expression rand)))
 
 ;apply-primitive: <primitiva> <list-of-expression> -> numero
 (define apply-primitive
   (lambda (prim args)
     (if (null? (cdr args))
         (cases primitive prim
-          (size () (string-length (caar args)))
-          (concat () (caar args))
-          (default (car args))
+          (sum () (car args))
+          (substrac () (car args))
+          (mult () (car args))
+          (div() (car args))
+          (concat() (car args))
+          (lengt()  (length (string->list (caar args))))
           )
         (cases primitive prim
           (sum () (+ (car args) (apply-primitive prim (cdr args))))
           (substrac () (- (car args) (apply-primitive prim (cdr args))))
           (mult () (* (car args) (apply-primitive prim (cdr args))))
-          (div () (/ (car args) (apply-primitive prim (cdr args))))
-          (concat () (string-append (caar args) (apply-primitive prim (cdr args))))
-          (size ()  (string-length (caar args)))
-          )
-        )
-    )
+          (div() (/ (car args) (apply-primitive prim (cdr args))))
+          (concat () (cons (car args) (apply-primitive prim (cdr args))))
+          (lengt ()  (length (string->list (car args))))
+          )))
   )
 
