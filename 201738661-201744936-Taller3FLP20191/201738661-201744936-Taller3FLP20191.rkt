@@ -1,5 +1,17 @@
 #lang eopl
+; Taller 3 Fundamentos de lenguaje de programacion
+; 
+; 201738661-201744936-Taller3FLP
+; 
+; Developers:
+; 
+; Jorge Eduardo Mayor Fernandez
+; Code: 201738661
+; 
+; Juan Sebastian Velasquez Acevedo
+; Code: 201744936
 
+;-------------------------------------------------------------------------------
 ;******************************************************************************************
 ;;;;; Simple Interpreter
 
@@ -13,11 +25,11 @@
 ;;            := (primitive-exp) <primitive> [expression (expression*) (;)]
 
 ;;<primitive> := (sum) +
-;;            := (substraction) -
+;;            := (substract) -
 ;;            := (div) /
 ;;            := (multiplication) *
 ;;            := (concat) concat
-;;            := (length) length
+;;            := (size) size
 
 ;******************************************************************************************
 
@@ -29,8 +41,6 @@
      (whitespace) skip)
     (comment
      ("%" (arbno (not #\newline))) skip)
-    (identifier
-     (letter (arbno (or letter digit "?"))) symbol)
     (number
      (digit (arbno digit)) number)
     (numberexpression
@@ -40,7 +50,7 @@
     (number
      ("-" digit "." (arbno digit)) number)
     (text
-     ((arbno letter digit)) string))
+     (letter (arbno (or letter digit))) string))
   )
 
 ;Syntactic specification (grammar)
@@ -48,7 +58,7 @@
 (define grammar-syntatic-specification
   '((program (expression) a-program)
     (expression (number) number-lit)
-    (expression ("\"" (arbno text) "\"") text-lit)
+    (expression ("\"" text "\"") text-lit)
     (expression
      (primitive "[" expression (arbno ";" expression) "]")
      primitive-exp)
@@ -70,25 +80,26 @@
   (lambda () (sllgen:list-define-datatypes scanner-lexical-specification grammar-syntatic-specification)))
 (show-the-datatypes)
 ;*******************************************************************************************
-;Parser, Scanner, Interfaz
+;Parser, Scanner, Interface
 
-;El FrontEnd (Análisis léxico (scanner) y sintáctico (parser) integrados)
-
+;The FrontEnd (Lexicon Analyzer (scanner) y syntactic (parser) integrados)
 
 (define scan&parse
   (sllgen:make-string-parser scanner-lexical-specification grammar-syntatic-specification))
-;El Analizador Léxico (Scanner)
+
+;Lexicon Analyzer (Scanner)
 
 (define just-scan
   (sllgen:make-string-scanner scanner-lexical-specification grammar-syntatic-specification))
 
+; Tests
 (scan&parse "-[55]")
 (scan&parse "-[5;1]")
 (scan&parse "\"ghf\"")
 
-;El Interpretador (FrontEnd + Evaluación + señal para lectura )
+;The Interpreter (FrontEnd + evaluation + sign for reading )
 
-(define interpretador
+(define interpreter
   (sllgen:make-rep-loop "--> "
                         (lambda (pgm) (eval-program  pgm))
                         (sllgen:make-stream-parser 
@@ -97,7 +108,7 @@
 
 ;*******************************************************************************************
 ;eval-program: <program> -> number
-; function that evaluates a program taking into account a given environment (it is initialized within the program)
+; Purpose: function that evaluates a program 
 
 (define eval-program
   (lambda (pgm)
@@ -106,10 +117,9 @@
                  (eval-expression body)))))
 
 
-;eval-expression: <expression> <enviroment> -> numero
-; evalua la expresión en el ambiente de entrada
-
-;Nota: En este caso primitive-exp necesita 2 parametros, peros siempre al menos un operando
+;eval-expression: <expression> -> number || string
+; Purpose: Evaluate the expression using cases to determine which datatype is,
+; it is used in eval-program. 
 (define eval-expression
   (lambda (exp)
     (cases expression exp
@@ -117,35 +127,25 @@
       (text-lit (characters) characters)
       (primitive-exp (prim exp rands)
                      (if (null? rands)
-                         (apply-primitive prim (list (eval-rand exp)))
-                         (apply-primitive prim (cons (eval-rand exp) (eval-rands rands)))
+                         (apply-primitive prim (list (eval-expression exp)))
+                         (apply-primitive prim (cons (eval-expression exp) (map (lambda (x) (eval-expression x)) rands)))
                          )
                      )
       )
     )
   )
 
-; funciones auxiliares para aplicar eval-expression a cada elemento de una 
-; lista de operandos (expresiones)
-(define eval-rands
-  (lambda (rands)
-    (map (lambda (x) (eval-rand x)) rands)
-    )
-  )
+;apply-primitive: <primitiva> <list-of-expression> -> number || string
+;Purpose: Operates the list of expression(at least one expression acording to grammar)
+; depending on what primitive is, which is identified with cases.
+; This procedure is used in  eval-expression.
 
-(define eval-rand
-  (lambda (rand)
-    (eval-expression rand)
-    )
-  )
-
-;apply-primitive: <primitiva> <list-of-expression> -> numero
 (define apply-primitive
   (lambda (prim args)
     (if (null? (cdr args))
         (cases primitive prim
-          (size () (string-length (caar args)))
-          (concat () (caar args))
+          (size () (string-length (car args)))
+          (concat () (car args))
           (default (car args))
           )
         (cases primitive prim
@@ -153,8 +153,8 @@
           (substrac () (- (car args) (apply-primitive prim (cdr args))))
           (mult () (* (car args) (apply-primitive prim (cdr args))))
           (div () (/ (car args) (apply-primitive prim (cdr args))))
-          (concat () (string-append (caar args) (apply-primitive prim (cdr args))))
-          (size ()  (string-length (caar args)))
+          (concat () (string-append (car args) (apply-primitive prim (cdr args))))
+          (size ()  (string-length (car args)))
           )
         )
     )
