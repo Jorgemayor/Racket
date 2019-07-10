@@ -67,6 +67,9 @@
     (expresion
      (primitiva "[" expresion (arbno ";" expresion) "]")
      primitiva-exp)
+    (expresion
+     ("Si" expresion "entonces" expresion "sino" expresion "fin")
+     condicional-exp)
     (primitiva ("+") suma)
     (primitiva ("-") resta)
     (primitiva ("*") multiplicacion)
@@ -129,7 +132,10 @@
      '(1 2 3)
      (empty-env))))
 
-
+;valor-verdad? determina si un valor dado corresponde a un valor booleano falso o verdadero
+(define valor-verdad?
+  (lambda (x)
+    (not (zero? x))))
 
 ;eval-expression: <expression> -> number || string
 ; Purpose: Evaluate the expression using cases to determine which datatype is,
@@ -140,10 +146,14 @@
       (texto-lit (datum) datum)
       (numero-lit (characters) characters)
       (identificador-lit (identificador) (buscar-variable env (string->symbol identificador)))
+      (condicional-exp (predicado expVerdad expFalso)
+                       (if (valor-verdad? (eval-expression predicado env))
+                           (eval-expression expVerdad env)
+                           (eval-expression expFalso env)))
       (primitiva-exp (prim exp rands)
                      (if (null? rands)
-                         (apply-primitive prim (list (eval-expression exp)))
-                         (apply-primitive prim (cons (eval-expression exp) (map (lambda (x) (eval-expression x)) rands)))
+                         (apply-primitive prim (list (eval-expression exp env)))
+                         (apply-primitive prim (cons (eval-expression exp env) (map (lambda (x) (eval-expression x env)) rands)))
                          )
                      )
       )
