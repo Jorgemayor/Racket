@@ -69,6 +69,8 @@
     (expresion (primitiva "[" expresion (arbno ";" expresion) "]") primitiva-exp)
     (expresion ("Si" expresion "entonces" expresion "sino" expresion "fin") condicional-exp)
     (expresion ("declarar" "(" (separated-list identifier "=" expresion ";") ")" "haga" expresion "fin") variableLocal-exp)
+    (expresion ("procedimiento" "[" (separated-list identifier ";") "]" "haga" expresion "fin") procedimiento-exp)
+    (expresion ("evaluar" expresion "enviando" "[" (separated-list expresion ";") "]" "fin") proc-evaluacion-exp)
     (primitiva ("+") suma)
     (primitiva ("-") resta)
     (primitiva ("*") multiplicacion)
@@ -142,9 +144,12 @@
 (define eval-expression
   (lambda (exp env)
     (cases expresion exp
-      (texto-lit (datum) datum)
-      (numero-lit (characters) characters)
-      (identificador-lit (identificador) (buscar-variable env identificador))
+      (texto-lit (datum)
+                 datum)
+      (numero-lit (characters)
+                  characters)
+      (identificador-lit (identificador)
+                         (buscar-variable env identificador))
       (condicional-exp (predicado expVerdad expFalso)
                        (if (valor-verdad? (eval-expression predicado env))
                            (eval-expression expVerdad env)
@@ -154,6 +159,16 @@
                            (eval-expression body (extended-env-record ids args env))
                            )
                          )
+      (procedimiento-exp (ids body)
+                         (cerradura ids body env))
+      (proc-evaluacion-exp (rator rands)
+                           (let ([proc (eval-expression rator env)]
+                                 [args (eval-rands rands env)])
+                             (if (procedimiento? proc)
+                                 (apply-procedure proc args)
+                                 ("Attemp to apply non-procedure ~s" proc))
+                             )
+                           )
       (primitiva-exp (prim exp rands)
                      (if (null? rands)
                          (apply-primitive prim (list (eval-expression exp env)))
@@ -260,3 +275,22 @@
                 #f))))))
 
 ;******************************************************************************************
+;Procediminetos
+
+(define-datatype procedimiento procedimiento?
+  (cerradura
+   (ids (list-of symbol?))
+   (body expresion?)
+   (env environment?))
+  )
+
+(define apply-procedure
+       (lambda (proc args)
+         (cases procedimiento proc
+           (cerradura (ids body env)
+                    (eval-expression body (extended-env-record ids args env)))
+           )
+         )
+       )
+
+;declarar (x=2;y=3) haga declarar (t=4;a = procedimiento[x;y;z] haga +[x;y;z] fin) haga evaluar a enviando [1;2;3] fin fin fin
