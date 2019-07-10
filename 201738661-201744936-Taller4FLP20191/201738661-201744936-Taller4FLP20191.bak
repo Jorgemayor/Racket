@@ -43,7 +43,7 @@
      ("%" (arbno (not #\newline))) skip)
     (number
      (digit (arbno digit)) number)
-    (number
+    (numberexpression
      ("-" digit (arbno digit)) number)
     (number
      (digit "." (arbno digit)) number)
@@ -79,7 +79,6 @@
 ;Test
 (define show-the-datatypes
   (lambda () (sllgen:list-define-datatypes scanner-lexical-specification grammar-syntatic-specification)))
-
 (show-the-datatypes)
 ;*******************************************************************************************
 ;Parser, Scanner, Interface
@@ -117,6 +116,7 @@
     (cases program pgm
       (a-program (body)
                  (eval-expression body)))))
+
 
 ;eval-expression: <expression> -> number || string
 ; Purpose: Evaluate the expression using cases to determine which datatype is,
@@ -159,11 +159,5 @@
           (size ()  (string-length (car args)))
           )
         )
-    )
-  )
-
-(define true-value?
-  (lambda (x)
-    (not (zero? x))
     )
   )
