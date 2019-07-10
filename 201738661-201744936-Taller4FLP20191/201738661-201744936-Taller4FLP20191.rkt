@@ -1,7 +1,7 @@
 #lang eopl
-; Taller 3 Fundamentos de lenguaje de programacion
+; Taller 4 Fundamentos de lenguaje de programacion
 ; 
-; 201738661-201744936-Taller3FLP
+; 201738661-201744936-Taller4FLP
 ; 
 ; Developers:
 ; 
@@ -17,19 +17,19 @@
 
 ;; Definition BNF for language expressions:
 
-;;<program> := (a-program) <expression>
+;;<programa> := (un-programa) <expresion>
 
 
-;;<expression> := (number-lit) <number>
-;;            := (text-lit)"<letters>"
-;;            := (primitive-exp) <primitive> [expression (expression*) (;)]
+;;<expresion> := (numero-lit) <numero>
+;;            := (texto-lit)"<letras>"
+;;            := (primitiva-exp) <primitiva> [expresion (expresion*) (;)]
 
-;;<primitive> := (sum) +
-;;            := (substract) -
+;;<primitiva> := (suma) +
+;;            := (resta) -
 ;;            := (div) /
-;;            := (multiplication) *
+;;            := (multiplicacion) *
 ;;            := (concat) concat
-;;            := (size) size
+;;            := (length) length
 
 ;******************************************************************************************
 
@@ -43,8 +43,8 @@
      ("%" (arbno (not #\newline))) skip)
     (number
      (digit (arbno digit)) number)
-    (numberexpression
-     ("-" digit (arbno digit)) number)
+    (number
+     ("-" digit "." (arbno digit)) number)
     (number
      (digit "." (arbno digit)) number)
     (number
@@ -56,19 +56,19 @@
 ;Syntactic specification (grammar)
 
 (define grammar-syntatic-specification
-  '((program (expression) a-program)
-    (expression (number) number-lit)
-    (expression ("\"" text "\"") text-lit)
-    (expression (text) id)
-    (expression
-     (primitive "[" expression (arbno ";" expression) "]")
-     primitive-exp)
-    (primitive ("+") sum)
-    (primitive ("-") substrac)
-    (primitive ("*") mult)
-    (primitive ("/") div)
-    (primitive ("concat") concat)
-    (primitive ("size") size)
+  '((programa (expresion) un-programa)
+    (expresion (number) numero-lit)
+    (expresion ("\"" text "\"") texto-lit)
+    (expresion (text) id)
+    (expresion
+     (primitiva "[" expresion (arbno ";" expresion) "]")
+     primitiva-exp)
+    (primitiva ("+") suma)
+    (primitiva ("-") resta)
+    (primitiva ("*") multiplicacion)
+    (primitiva ("/") div)
+    (primitiva ("concat") concat)
+    (primitiva ("length") length)
     )
   )
 
@@ -108,13 +108,13 @@
                          grammar-syntatic-specification)))
 
 ;*******************************************************************************************
-;eval-program: <program> -> number
+;eval-program: <programa> -> number |string | symbol
 ; Purpose: function that evaluates a program 
 
 (define eval-program
   (lambda (pgm)
-    (cases program pgm
-      (a-program (body)
+    (cases programa pgm
+      (un-programa (body)
                  (eval-expression body)))))
 
 
@@ -123,11 +123,11 @@
 ; it is used in eval-program. 
 (define eval-expression
   (lambda (exp)
-    (cases expression exp
-      (number-lit (datum) datum)
-      (text-lit (characters) characters)
+    (cases expresion exp
+      (texto-lit (datum) datum)
+      (numero-lit (characters) characters)
       (id (identificador) (string->symbol identificador))
-      (primitive-exp (prim exp rands)
+      (primitiva-exp (prim exp rands)
                      (if (null? rands)
                          (apply-primitive prim (list (eval-expression exp)))
                          (apply-primitive prim (cons (eval-expression exp) (map (lambda (x) (eval-expression x)) rands)))
@@ -145,18 +145,18 @@
 (define apply-primitive
   (lambda (prim args)
     (if (null? (cdr args))
-        (cases primitive prim
-          (size () (string-length (car args)))
+        (cases primitiva prim
+          (length () (string-length (car args)))
           (concat () (car args))
           (default (car args))
           )
-        (cases primitive prim
-          (sum () (+ (car args) (apply-primitive prim (cdr args))))
-          (substrac () (- (car args) (apply-primitive prim (cdr args))))
-          (mult () (* (car args) (apply-primitive prim (cdr args))))
+        (cases primitiva prim
+          (suma () (+ (car args) (apply-primitive prim (cdr args))))
+          (resta () (- (car args) (apply-primitive prim (cdr args))))
+          (multiplicacion () (* (car args) (apply-primitive prim (cdr args))))
           (div () (/ (car args) (apply-primitive prim (cdr args))))
           (concat () (string-append (car args) (apply-primitive prim (cdr args))))
-          (size ()  (string-length (car args)))
+          (length ()  (string-length (car args)))
           )
         )
     )
