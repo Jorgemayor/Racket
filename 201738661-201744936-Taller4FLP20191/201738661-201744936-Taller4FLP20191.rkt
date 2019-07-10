@@ -49,7 +49,7 @@
     (number
      (digit (arbno digit)) number)
     (number
-     ("-" digit "." (arbno digit)) number)
+     ("-" digit (arbno digit)) number)
     (number
      (digit "." (arbno digit)) number)
     (number
@@ -140,7 +140,7 @@
   (lambda (x)
     (not (zero? x))))
 
-;eval-expression: <expression> -> number || string
+;eval-expression: <expresion> <ambiente>-> number || string || cerradura
 ; Purpose: Evaluate the expression using cases to determine which datatype is,
 ; it is used in eval-program. 
 (define eval-expression
@@ -323,6 +323,8 @@
 ;declarar (x=2;y=3) haga declarar (t=4;a = procedimiento[x;y;z] haga +[x;y;z] fin) haga evaluar a enviando [1;2;3] fin fin fin
 
 
+
+;IMPLEMENTACION DEL LENGUAJE DE PROGRAMACION
 ;-------------------------------------------------------------------
 ;PUNTO 12 A: area de un circulo de radio 4
 ;-------------------------------------------------------------------
