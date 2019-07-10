@@ -131,8 +131,8 @@
 (define init-env
   (lambda ()
     (extend-env
-     '(a b c)
-     '(1 2 3)
+     '(a b c pi)
+     '(1 2 3 3.1416)
      (empty-env))))
 
 ;valor-verdad? determina si un valor dado corresponde a un valor booleano falso o verdadero
@@ -321,11 +321,19 @@
 
 ;declarar (x=2;y=3) haga declarar (t=4;a = procedimiento[x;y;z] haga +[x;y;z] fin) haga evaluar a enviando [1;2;3] fin fin fin
 
+
 ;-------------------------------------------------------------------
-;PUNTO 12: factorial de un numero n de forma recursiva
+;PUNTO 12 A: area de un circulo de radio 4
+;-------------------------------------------------------------------
+;declarar (area=procedimiento[r] haga *[pi;r;r] fin) haga evaluar area enviando [4] fin fin
+;-------------------------------------------------------------------
+
+;-------------------------------------------------------------------
+;PUNTO 12 B: factorial de un numero n de forma recursiva
 ;-------------------------------------------------------------------
 ;letrec
 ;fact (x) = Si x entonces *[ x; evaluar fact enviando [-[x;1]] fin] sino 1 fin
 ;in
 ;evaluar fact enviando [6] fin
 ;-------------------------------------------------------------------
+
