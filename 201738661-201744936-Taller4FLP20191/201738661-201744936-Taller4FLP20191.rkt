@@ -1,7 +1,7 @@
 #lang eopl
-; Taller 3 Fundamentos de lenguaje de programacion
+; Taller 4 Fundamentos de lenguaje de programacion
 ; 
-; 201738661-201744936-Taller3FLP
+; 201738661-201744936-Taller4FLP
 ; 
 ; Developers:
 ; 
@@ -17,19 +17,23 @@
 
 ;; Definition BNF for language expressions:
 
-;;<program> := (a-program) <expression>
+;;<programa> := (un-programa) <expresion>
 
 
-;;<expression> := (number-lit) <number>
-;;            := (text-lit)"<letters>"
-;;            := (primitive-exp) <primitive> [expression (expression*) (;)]
+;;<expresion> := (numero-lit) <numero>
+;;            := (texto-lit)"<letras>"
+;;            := (primitiva-exp) <primitiva> [expresion (expresion*) (;)]
+;;            := (identificador-lit) <identificador>
+;;            := (condicional-exp) Si <expresion> entonces <expresion> sino <expresion> fin
+;;            := (variableLocal-exp) declarar (<identificador> = <expresion> (;)) haga <expresion> fin
+;;            := (procedimiento-exp) procedimiento [<identificador>*';'] haga <expresion> fin
 
-;;<primitive> := (sum) +
-;;            := (substract) -
+;;<primitiva> := (suma) +
+;;            := (resta) -
 ;;            := (div) /
-;;            := (multiplication) *
+;;            := (multiplicacion) *
 ;;            := (concat) concat
-;;            := (size) size
+;;            := (length) length
 
 ;******************************************************************************************
 
@@ -44,7 +48,7 @@
     (number
      (digit (arbno digit)) number)
     (number
-     ("-" digit (arbno digit)) number)
+     ("-" digit "." (arbno digit)) number)
     (number
      (digit "." (arbno digit)) number)
     (number
@@ -56,19 +60,22 @@
 ;Syntactic specification (grammar)
 
 (define grammar-syntatic-specification
-  '((program (expression) a-program)
-    (expression (number) number-lit)
-    (expression ("\"" text "\"") text-lit)
-    (expression (text) id)
-    (expression
-     (primitive "[" expression (arbno ";" expression) "]")
-     primitive-exp)
-    (primitive ("+") sum)
-    (primitive ("-") substrac)
-    (primitive ("*") mult)
-    (primitive ("/") div)
-    (primitive ("concat") concat)
-    (primitive ("size") size)
+  '((programa (expresion) un-programa)
+    (expresion (number) numero-lit)
+    (expresion ("\"" text "\"") texto-lit)
+    (expresion (text) identificador-lit)
+    (expresion
+     (primitiva "[" expresion (arbno ";" expresion) "]")
+     primitiva-exp)
+    (expresion
+     ("Si" expresion "entonces" expresion "sino" expresion "fin")
+     condicional-exp)
+    (primitiva ("+") suma)
+    (primitiva ("-") resta)
+    (primitiva ("*") multiplicacion)
+    (primitiva ("/") div)
+    (primitiva ("concat") concat)
+    (primitiva ("length") length)
     )
   )
 
@@ -79,7 +86,6 @@
 ;Test
 (define show-the-datatypes
   (lambda () (sllgen:list-define-datatypes scanner-lexical-specification grammar-syntatic-specification)))
-
 (show-the-datatypes)
 ;*******************************************************************************************
 ;Parser, Scanner, Interface
@@ -109,28 +115,45 @@
                          grammar-syntatic-specification)))
 
 ;*******************************************************************************************
-;eval-program: <program> -> number
+;eval-program: <programa> -> number |string | symbol
 ; Purpose: function that evaluates a program 
 
 (define eval-program
   (lambda (pgm)
-    (cases program pgm
-      (a-program (body)
-                 (eval-expression body)))))
+    (cases programa pgm
+      (un-programa (body)
+                 (eval-expression body (init-env))))))
+
+; Initial Enviroment
+(define init-env
+  (lambda ()
+    (extend-env
+     '(a b c)
+     '(1 2 3)
+     (empty-env))))
+
+;valor-verdad? determina si un valor dado corresponde a un valor booleano falso o verdadero
+(define valor-verdad?
+  (lambda (x)
+    (not (zero? x))))
 
 ;eval-expression: <expression> -> number || string
 ; Purpose: Evaluate the expression using cases to determine which datatype is,
 ; it is used in eval-program. 
 (define eval-expression
-  (lambda (exp)
-    (cases expression exp
-      (number-lit (datum) datum)
-      (text-lit (characters) characters)
-      (id (identificador) (string->symbol identificador))
-      (primitive-exp (prim exp rands)
+  (lambda (exp env)
+    (cases expresion exp
+      (texto-lit (datum) datum)
+      (numero-lit (characters) characters)
+      (identificador-lit (identificador) (buscar-variable env (string->symbol identificador)))
+      (condicional-exp (predicado expVerdad expFalso)
+                       (if (valor-verdad? (eval-expression predicado env))
+                           (eval-expression expVerdad env)
+                           (eval-expression expFalso env)))
+      (primitiva-exp (prim exp rands)
                      (if (null? rands)
-                         (apply-primitive prim (list (eval-expression exp)))
-                         (apply-primitive prim (cons (eval-expression exp) (map (lambda (x) (eval-expression x)) rands)))
+                         (apply-primitive prim (list (eval-expression exp env)))
+                         (apply-primitive prim (cons (eval-expression exp env) (map (lambda (x) (eval-expression x env)) rands)))
                          )
                      )
       )
@@ -145,25 +168,80 @@
 (define apply-primitive
   (lambda (prim args)
     (if (null? (cdr args))
-        (cases primitive prim
-          (size () (string-length (car args)))
+        (cases primitiva prim
+          (length () (string-length (car args)))
           (concat () (car args))
           (default (car args))
           )
-        (cases primitive prim
-          (sum () (+ (car args) (apply-primitive prim (cdr args))))
-          (substrac () (- (car args) (apply-primitive prim (cdr args))))
-          (mult () (* (car args) (apply-primitive prim (cdr args))))
+        (cases primitiva prim
+          (suma () (+ (car args) (apply-primitive prim (cdr args))))
+          (resta () (- (car args) (apply-primitive prim (cdr args))))
+          (multiplicacion () (* (car args) (apply-primitive prim (cdr args))))
           (div () (/ (car args) (apply-primitive prim (cdr args))))
           (concat () (string-append (car args) (apply-primitive prim (cdr args))))
-          (size ()  (string-length (car args)))
+          (length ()  (string-length (car args)))
           )
         )
     )
   )
 
-(define true-value?
-  (lambda (x)
-    (not (zero? x))
-    )
-  )
+;*******************************************************************************************
+;Ambientes
+
+;definición del tipo de dato ambiente
+(define-datatype environment environment?
+  (empty-env-record)
+  (extended-env-record (syms (list-of symbol?))
+                       (vals (list-of scheme-value?))
+
+                       (env environment?)))
+
+(define scheme-value? (lambda (v) #t))
+
+;empty-env:      -> enviroment
+;función que crea un ambiente vacío
+(define empty-env  
+  (lambda ()
+    (empty-env-record)))       ;llamado al constructor de ambiente vacío 
+
+
+;extend-env: <list-of symbols> <list-of numbers> enviroment -> enviroment
+;función que crea un ambiente extendido
+(define extend-env
+  (lambda (syms vals env)
+    (extended-env-record syms vals env))) 
+
+;función que busca un símbolo en un ambiente
+(define buscar-variable
+  (lambda (env sym)
+    (cases environment env
+      (empty-env-record ()
+                        (eopl:error 'buscar-variable "No binding for ~s" sym))
+      (extended-env-record (syms vals env)
+                           (let ((pos (list-find-position sym syms)))
+                             (if (number? pos)
+                                 (list-ref vals pos)
+                                 (buscar-variable env sym)))))))
+
+
+;****************************************************************************************
+;Funciones Auxiliares
+
+; funciones auxiliares para encontrar la posición de un símbolo
+; en la lista de símbolos de unambiente
+
+(define list-find-position
+  (lambda (sym los)
+    (list-index (lambda (sym1) (eqv? sym1 sym)) los)))
+
+(define list-index
+  (lambda (pred ls)
+    (cond
+      ((null? ls) #f)
+      ((pred (car ls)) 0)
+      (else (let ((list-index-r (list-index pred (cdr ls))))
+              (if (number? list-index-r)
+                (+ list-index-r 1)
+                #f))))))
+
+;******************************************************************************************
