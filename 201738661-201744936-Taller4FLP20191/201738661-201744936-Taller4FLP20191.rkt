@@ -71,6 +71,7 @@
     (expresion ("declarar" "(" (separated-list identifier "=" expresion ";") ")" "haga" expresion "fin") variableLocal-exp)
     (expresion ("procedimiento" "[" (separated-list identifier ";") "]" "haga" expresion "fin") procedimiento-exp)
     (expresion ("evaluar" expresion "enviando" "[" (separated-list expresion ";") "]" "fin") proc-evaluacion-exp)
+    (expresion ("letrec" (arbno identifier "(" (separated-list identifier ",") ")" "=" expresion)  "in" expresion) letrec-exp)
     (primitiva ("+") suma)
     (primitiva ("-") resta)
     (primitiva ("*") multiplicacion)
@@ -123,7 +124,7 @@
   (lambda (pgm)
     (cases programa pgm
       (un-programa (body)
-                 (eval-expression body (init-env))))))
+                   (eval-expression body (init-env))))))
 
 ; Initial Enviroment
 (define init-env
@@ -169,6 +170,10 @@
                                  ("Attemp to apply non-procedure ~s" proc))
                              )
                            )
+      (letrec-exp (proc-names idss bodies letrec-body)
+                  (eval-expression letrec-body
+                                   (recursively-extended-env-record proc-names idss bodies env))
+                  )
       (primitiva-exp (prim exp rands)
                      (if (null? rands)
                          (apply-primitive prim (list (eval-expression exp env)))
@@ -224,7 +229,12 @@
   (empty-env-record)
   (extended-env-record (syms (list-of symbol?))
                        (vals (list-of scheme-value?))
-                       (env environment?)))
+                       (env environment?))
+  (recursively-extended-env-record (proc-names (list-of symbol?))
+                                   (idss (list-of (list-of symbol?)))
+                                   (bodies (list-of expresion?))
+                                   (env environment?))
+  )
 
 (define scheme-value? (lambda (v) #t))
 
@@ -251,7 +261,17 @@
                            (let ((pos (list-find-position sym syms)))
                              (if (number? pos)
                                  (list-ref vals pos)
-                                 (buscar-variable env sym)))))))
+                                 (buscar-variable env sym))))
+      (recursively-extended-env-record (proc-names idss bodies old-env)
+                                       (let ([pos (list-find-position sym proc-names)])
+                                         (if (number? pos)
+                                             (cerradura (list-ref idss pos)
+                                                        (list-ref bodies pos)
+                                                        env)
+                                             (buscar-variable old-env sym))))
+      )
+    )
+  )
 
 
 ;****************************************************************************************
@@ -271,8 +291,8 @@
       ((pred (car ls)) 0)
       (else (let ((list-index-r (list-index pred (cdr ls))))
               (if (number? list-index-r)
-                (+ list-index-r 1)
-                #f))))))
+                  (+ list-index-r 1)
+                  #f))))))
 
 ;******************************************************************************************
 ;Procediminetos
@@ -285,12 +305,12 @@
   )
 
 (define apply-procedure
-       (lambda (proc args)
-         (cases procedimiento proc
-           (cerradura (ids body env)
-                    (eval-expression body (extended-env-record ids args env)))
-           )
-         )
-       )
+  (lambda (proc args)
+    (cases procedimiento proc
+      (cerradura (ids body env)
+                 (eval-expression body (extended-env-record ids args env)))
+      )
+    )
+  )
 
 ;declarar (x=2;y=3) haga declarar (t=4;a = procedimiento[x;y;z] haga +[x;y;z] fin) haga evaluar a enviando [1;2;3] fin fin fin
