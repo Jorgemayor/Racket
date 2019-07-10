@@ -157,7 +157,7 @@
                            (eval-expression expFalso env)))
       (variableLocal-exp (ids rands body)
                          (let ([args (eval-rands rands env)])
-                           (eval-expression body (extended-env-record ids args env))
+                           (eval-expression body (extendido ids args env))
                            )
                          )
       (procedimiento-exp (ids body)
@@ -225,39 +225,39 @@
 ;Ambientes
 
 ;definición del tipo de dato ambiente
-(define-datatype environment environment?
-  (empty-env-record)
-  (extended-env-record (syms (list-of symbol?))
+(define-datatype ambiente ambiente?
+  (vacio)
+  (extendido (syms (list-of symbol?))
                        (vals (list-of scheme-value?))
-                       (env environment?))
+                       (env ambiente?))
   (recursively-extended-env-record (proc-names (list-of symbol?))
                                    (idss (list-of (list-of symbol?)))
                                    (bodies (list-of expresion?))
-                                   (env environment?))
+                                   (env ambiente?))
   )
 
 (define scheme-value? (lambda (v) #t))
 
-;empty-env:      -> enviroment
+;empty-env:      -> ambiente
 ;función que crea un ambiente vacío
 (define empty-env  
   (lambda ()
-    (empty-env-record)))       ;llamado al constructor de ambiente vacío 
+    (vacio)))       ;llamado al constructor de ambiente vacío 
 
 
-;extend-env: <list-of symbols> <list-of numbers> enviroment -> enviroment
+;extend-env: <list-of symbols> <list-of numbers> ambiente -> ambiente
 ;función que crea un ambiente extendido
 (define extend-env
   (lambda (syms vals env)
-    (extended-env-record syms vals env))) 
+    (extendido syms vals env))) 
 
 ;función que busca un símbolo en un ambiente
 (define buscar-variable
   (lambda (env sym)
-    (cases environment env
-      (empty-env-record ()
+    (cases ambiente env
+      (vacio ()
                         (eopl:error 'buscar-variable "No binding for ~s" sym))
-      (extended-env-record (syms vals env)
+      (extendido (syms vals env)
                            (let ((pos (list-find-position sym syms)))
                              (if (number? pos)
                                  (list-ref vals pos)
@@ -301,14 +301,14 @@
   (cerradura
    (ids (list-of symbol?))
    (body expresion?)
-   (env environment?))
+   (env ambiente?))
   )
 
 (define apply-procedure
   (lambda (proc args)
     (cases procedimiento proc
       (cerradura (ids body env)
-                 (eval-expression body (extended-env-record ids args env)))
+                 (eval-expression body (extendido ids args env)))
       )
     )
   )
