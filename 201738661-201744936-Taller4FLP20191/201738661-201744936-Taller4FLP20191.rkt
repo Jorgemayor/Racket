@@ -27,6 +27,7 @@
 ;;            := (condicional-exp) Si <expresion> entonces <expresion> sino <expresion> fin
 ;;            := (variableLocal-exp) declarar (<identificador> = <expresion> (;)) haga <expresion> fin
 ;;            := (procedimiento-exp) procedimiento [<identificador>*';'] haga <expresion> fin
+;;            ::= (letrec) letrec (<identificador> (<identificador> ,)* = <expresion>)* in <expresion> 
 
 ;;<primitiva> := (suma) +
 ;;            := (resta) -
@@ -313,4 +314,18 @@
     )
   )
 
+(interpreter)
+
+
+;Pruebas:
+
 ;declarar (x=2;y=3) haga declarar (t=4;a = procedimiento[x;y;z] haga +[x;y;z] fin) haga evaluar a enviando [1;2;3] fin fin fin
+
+;-------------------------------------------------------------------
+;PUNTO 12: factorial de un numero n de forma recursiva
+;-------------------------------------------------------------------
+;letrec
+;fact (x) = Si x entonces *[ x; evaluar fact enviando [-[x;1]] fin] sino 1 fin
+;in
+;evaluar fact enviando [6] fin
+;-------------------------------------------------------------------
