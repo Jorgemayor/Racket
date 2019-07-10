@@ -54,7 +54,9 @@
     (number
      ("-" digit "." (arbno digit)) number)
     (text
-     (letter (arbno (or letter digit))) string))
+     ("\"" letter (arbno (or letter digit)) "\"") string)
+    (identifier
+     (letter (arbno (or letter digit "?"))) symbol))
   )
 
 ;Syntactic specification (grammar)
@@ -62,14 +64,11 @@
 (define grammar-syntatic-specification
   '((programa (expresion) un-programa)
     (expresion (number) numero-lit)
-    (expresion ("\"" text "\"") texto-lit)
-    (expresion (text) identificador-lit)
-    (expresion
-     (primitiva "[" expresion (arbno ";" expresion) "]")
-     primitiva-exp)
-    (expresion
-     ("Si" expresion "entonces" expresion "sino" expresion "fin")
-     condicional-exp)
+    (expresion (text) texto-lit)
+    (expresion (identifier) identificador-lit)
+    (expresion (primitiva "[" expresion (arbno ";" expresion) "]") primitiva-exp)
+    (expresion ("Si" expresion "entonces" expresion "sino" expresion "fin") condicional-exp)
+    (expresion ("declarar" "(" (separated-list identifier "=" expresion ";") ")" "haga" expresion "fin") variableLocal-exp)
     (primitiva ("+") suma)
     (primitiva ("-") resta)
     (primitiva ("*") multiplicacion)
@@ -145,11 +144,16 @@
     (cases expresion exp
       (texto-lit (datum) datum)
       (numero-lit (characters) characters)
-      (identificador-lit (identificador) (buscar-variable env (string->symbol identificador)))
+      (identificador-lit (identificador) (buscar-variable env identificador))
       (condicional-exp (predicado expVerdad expFalso)
                        (if (valor-verdad? (eval-expression predicado env))
                            (eval-expression expVerdad env)
                            (eval-expression expFalso env)))
+      (variableLocal-exp (ids rands body)
+                         (let ([args (eval-rands rands env)])
+                           (eval-expression body (extended-env-record ids args env))
+                           )
+                         )
       (primitiva-exp (prim exp rands)
                      (if (null? rands)
                          (apply-primitive prim (list (eval-expression exp env)))
@@ -159,6 +163,18 @@
       )
     )
   )
+
+
+; funciones auxiliares para aplicar eval-expression a cada elemento de una 
+; lista de operandos (expresiones)
+(define eval-rands
+  (lambda (rands env)
+    (map (lambda (x) (eval-rand x env)) rands)))
+
+(define eval-rand
+  (lambda (rand env)
+    (eval-expression rand env)))
+
 
 ;apply-primitive: <primitiva> <list-of-expression> -> number || string
 ;Purpose: Operates the list of expression(at least one expression acording to grammar)
@@ -193,7 +209,6 @@
   (empty-env-record)
   (extended-env-record (syms (list-of symbol?))
                        (vals (list-of scheme-value?))
-
                        (env environment?)))
 
 (define scheme-value? (lambda (v) #t))
