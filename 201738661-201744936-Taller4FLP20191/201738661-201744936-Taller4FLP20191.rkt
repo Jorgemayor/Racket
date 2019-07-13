@@ -55,9 +55,7 @@
     (number
      ("-" digit "." (arbno digit)) number)
     (text
-     ("\"" letter (arbno (or letter digit)) "\"") string)
-    (identifier
-     (letter (arbno (or letter digit "?"))) symbol))
+     (letter (arbno (or letter digit))) string))
   )
 
 ;Syntactic specification (grammar)
@@ -65,14 +63,14 @@
 (define grammar-syntatic-specification
   '((programa (expresion) un-programa)
     (expresion (number) numero-lit)
-    (expresion (text) texto-lit)
-    (expresion (identifier) identificador-lit)
+    (expresion (text) identificador-lit)
+    (expresion ("\"" text "\"") texto-lit)
     (expresion (primitiva "[" expresion (arbno ";" expresion) "]") primitiva-exp)
     (expresion ("Si" expresion "entonces" expresion "sino" expresion "fin") condicional-exp)
-    (expresion ("declarar" "(" (separated-list identifier "=" expresion ";") ")" "haga" expresion "fin") variableLocal-exp)
-    (expresion ("procedimiento" "[" (separated-list identifier ";") "]" "haga" expresion "fin") procedimiento-exp)
+    (expresion ("declarar" "(" (separated-list text "=" expresion ";") ")" "haga" expresion "fin") variableLocal-exp)
+    (expresion ("procedimiento" "[" (separated-list text ";") "]" "haga" expresion "fin") procedimiento-exp)
     (expresion ("evaluar" expresion "enviando" "[" (separated-list expresion ";") "]" "fin") proc-evaluacion-exp)
-    (expresion ("letrec" (arbno identifier "(" (separated-list identifier ",") ")" "=" expresion)  "in" expresion) letrec-exp)
+    (expresion ("letrec" (arbno text "(" (separated-list text ",") ")" "=" expresion)  "in" expresion) letrec-exp)
     (primitiva ("+") suma)
     (primitiva ("-") resta)
     (primitiva ("*") multiplicacion)
@@ -151,14 +149,14 @@
       (numero-lit (characters)
                   characters)
       (identificador-lit (identificador)
-                         (buscar-variable env identificador))
+                         (buscar-variable env (string->symbol identificador)))
       (condicional-exp (predicado expVerdad expFalso)
                        (if (valor-verdad? (eval-expression predicado env))
                            (eval-expression expVerdad env)
                            (eval-expression expFalso env)))
       (variableLocal-exp (ids rands body)
                          (let ([args (eval-rands rands env)])
-                           (eval-expression body (extendido ids args env))
+                           (eval-expression body (extendido (listOfString->listOfSymbols ids) args env))
                            )
                          )
       (procedimiento-exp (ids body)
@@ -171,9 +169,9 @@
                                  ("Attemp to apply non-procedure ~s" proc))
                              )
                            )
-      (letrec-exp (proc-names idss bodies letrec-body)
+      (letrec-exp (proc-names ids bodies letrec-body)
                   (eval-expression letrec-body
-                                   (recursively-extended-env-record proc-names idss bodies env))
+                                   (recursively-extended-env-record proc-names (listOfString->listOfSymbols ids) bodies env))
                   )
       (primitiva-exp (prim exp rands)
                      (if (null? rands)
@@ -197,6 +195,11 @@
     (eval-expression rand env)))
 
 
+(define listOfString->listOfSymbols
+  (lambda (ids)
+    (cond [(null? ids) empty]
+          [else (cons (string->symbol (car ids)) (listOfString->listOfSymbols (cdr ids)))])))
+
 ;apply-primitive: <primitiva> <list-of-expression> -> number || string
 ;Purpose: Operates the list of expression(at least one expression acording to grammar)
 ; depending on what primitive is, which is identified with cases.
@@ -207,7 +210,6 @@
     (if (null? (cdr args))
         (cases primitiva prim
           (length () (string-length (car args)))
-          (concat () (car args))
           (default (car args))
           )
         (cases primitiva prim
