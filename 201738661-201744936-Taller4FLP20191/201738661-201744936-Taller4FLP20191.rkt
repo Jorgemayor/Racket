@@ -109,7 +109,7 @@
 ;The Interpreter (FrontEnd + evaluation + sign for reading )
 
 (define interpreter
-  (sllgen:make-rep-loop "--> "
+  (sllgen:make-rep-loop "(/◕ヮ◕)/*:･ﾟ✧ "
                         (lambda (pgm) (eval-program  pgm))
                         (sllgen:make-stream-parser 
                          scanner-lexical-specification
@@ -259,7 +259,7 @@
   (lambda (env sym)
     (cases ambiente env
       (vacio ()
-                        (eopl:error 'buscar-variable "No binding for ~s" sym))
+                        (eopl:error 'buscar-variable "Error, la variable no existe" sym))
       (extendido (syms vals env)
                            (let ((pos (list-find-position sym syms)))
                              (if (number? pos)
