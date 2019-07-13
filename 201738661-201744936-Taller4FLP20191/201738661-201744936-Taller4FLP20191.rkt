@@ -13,7 +13,7 @@
 
 ;-------------------------------------------------------------------------------
 ;******************************************************************************************
-;;;;; Simple Interpreter
+;;;;; Full Interpreter
 
 ;; Definition BNF for language expressions:
 
@@ -21,13 +21,13 @@
 
 
 ;;<expresion> := (numero-lit) <numero>
-;;            := (texto-lit)"<letras>"
+;;            := (texto-lit) "<letras>"
 ;;            := (primitiva-exp) <primitiva> [expresion (expresion*) (;)]
 ;;            := (identificador-lit) <identificador>
 ;;            := (condicional-exp) Si <expresion> entonces <expresion> sino <expresion> fin
 ;;            := (variableLocal-exp) declarar (<identificador> = <expresion> (;)) haga <expresion> fin
 ;;            := (procedimiento-exp) procedimiento [<identificador>*';'] haga <expresion> fin
-;;            ::= (letrec) letrec (<identificador> (<identificador> ,)* = <expresion>)* in <expresion> 
+;;            ::= (letrec) letrec {<identificador> (<identificador> ,)* = <expresion>}* in <expresion> 
 
 ;;<primitiva> := (suma) +
 ;;            := (resta) -
@@ -55,7 +55,7 @@
     (number
      ("-" digit "." (arbno digit)) number)
     (text
-     (letter (arbno (or letter digit))) string))
+     (letter (arbno (or letter digit "?"))) string))
   )
 
 ;Syntactic specification (grammar)
@@ -70,7 +70,7 @@
     (expresion ("declarar" "(" (separated-list text "=" expresion ";") ")" "haga" expresion "fin") variableLocal-exp)
     (expresion ("procedimiento" "[" (separated-list text ";") "]" "haga" expresion "fin") procedimiento-exp)
     (expresion ("evaluar" expresion "enviando" "[" (separated-list expresion ";") "]" "fin") proc-evaluacion-exp)
-    (expresion ("letrec" (arbno text "(" (separated-list text ",") ")" "=" expresion)  "in" expresion) letrec-exp)
+    (expresion ("letrec" "{" (arbno text "(" (separated-list text ",") ")" "=" expresion) "}"  "in" expresion) letrec-exp)
     (primitiva ("+") suma)
     (primitiva ("-") resta)
     (primitiva ("*") multiplicacion)
@@ -109,7 +109,7 @@
 ;The Interpreter (FrontEnd + evaluation + sign for reading )
 
 (define interpreter
-  (sllgen:make-rep-loop "(/◕ヮ◕)/*:･ﾟ✧ "
+  (sllgen:make-rep-loop "--> "
                         (lambda (pgm) (eval-program  pgm))
                         (sllgen:make-stream-parser 
                          scanner-lexical-specification
@@ -133,7 +133,7 @@
      '(1 2 3 3.1416)
      (empty-env))))
 
-;valor-verdad? determina si un valor dado corresponde a un valor booleano falso o verdadero
+;valor-verdad? determines whether a given value corresponds to a false or true Boolean value
 (define valor-verdad?
   (lambda (x)
     (not (zero? x))))
@@ -160,7 +160,7 @@
                            )
                          )
       (procedimiento-exp (ids body)
-                         (cerradura ids body env))
+                         (cerradura (listOfString->listOfSymbols ids ) body env))
       (proc-evaluacion-exp (rator rands)
                            (let ([proc (eval-expression rator env)]
                                  [args (eval-rands rands env)])
@@ -171,7 +171,7 @@
                            )
       (letrec-exp (proc-names ids bodies letrec-body)
                   (eval-expression letrec-body
-                                   (recursively-extended-env-record proc-names (listOfString->listOfSymbols ids) bodies env))
+                                   (recursively-extended-env-record (listOfString->listOfSymbols proc-names ) (listOfListString->listOfListSymbols ids ) bodies env))
                   )
       (primitiva-exp (prim exp rands)
                      (if (null? rands)
@@ -184,8 +184,8 @@
   )
 
 
-; funciones auxiliares para aplicar eval-expression a cada elemento de una 
-; lista de operandos (expresiones)
+; auxiliary functions to apply eval-expression to each element of a
+; list of operands (expressions)
 (define eval-rands
   (lambda (rands env)
     (map (lambda (x) (eval-rand x env)) rands)))
@@ -194,11 +194,16 @@
   (lambda (rand env)
     (eval-expression rand env)))
 
-
+;Auxiliary functions to convert lists of strings to lists of symbols
 (define listOfString->listOfSymbols
   (lambda (ids)
     (cond [(null? ids) empty]
           [else (cons (string->symbol (car ids)) (listOfString->listOfSymbols (cdr ids)))])))
+
+(define listOfListString->listOfListSymbols
+  (lambda (ids)
+    (cond [(null? ids) empty]
+          [else (cons (listOfString->listOfSymbols (car ids)) (listOfListString->listOfListSymbols (cdr ids)))])))
 
 ;apply-primitive: <primitiva> <list-of-expression> -> number || string
 ;Purpose: Operates the list of expression(at least one expression acording to grammar)
@@ -225,9 +230,12 @@
   )
 
 ;*******************************************************************************************
-;Ambientes
+;Environments
 
-;definición del tipo de dato ambiente
+;<ambiente>:= (vacio) '()
+;            (extendido) (lista-simbolos) (lista-expresiones) <ambiente>
+
+;definition of the type of environment data (ambiente)
 (define-datatype ambiente ambiente?
   (vacio)
   (extendido (syms (list-of symbol?))
@@ -241,25 +249,26 @@
 
 (define scheme-value? (lambda (v) #t))
 
-;empty-env:      -> ambiente
-;función que crea un ambiente vacío
+;empty-env:  -> ambiente
+;; function that creates an empty environment(vacio)
 (define empty-env  
   (lambda ()
-    (vacio)))       ;llamado al constructor de ambiente vacío 
+    (vacio)))       ;called the empty environment builder 
 
 
 ;extend-env: <list-of symbols> <list-of numbers> ambiente -> ambiente
-;función que crea un ambiente extendido
+; function that creates an extended environment
 (define extend-env
   (lambda (syms vals env)
     (extendido syms vals env))) 
 
-;función que busca un símbolo en un ambiente
+;buscar-variable: <ambiente><symbol>->value
+;function that looks for a symbol in an environment
 (define buscar-variable
   (lambda (env sym)
     (cases ambiente env
       (vacio ()
-                        (eopl:error 'buscar-variable "Error, la variable no existe" sym))
+                        (eopl:error 'buscar-variable "No binding for ~s" sym))
       (extendido (syms vals env)
                            (let ((pos (list-find-position sym syms)))
                              (if (number? pos)
@@ -278,10 +287,10 @@
 
 
 ;****************************************************************************************
-;Funciones Auxiliares
+; Auxiliary functions
 
-; funciones auxiliares para encontrar la posición de un símbolo
-; en la lista de símbolos de unambiente
+; auxiliary functions to find the position of a symbol
+; in the list of symbols of an environment
 
 (define list-find-position
   (lambda (sym los)
@@ -320,9 +329,15 @@
 (interpreter)
 
 
-;Pruebas:
-
+;Tests:
+;Si +[2;3] entonces 2 sino 3 fin
+;Si -[3;3] entonces 2 sino 3 fin
+;declarar (x=2;y=3;a=7) haga +[a;-[x;y]] fin
+;declarar (x=2;y=3;a=7) haga a fin
+;declarar(x=2;y=3) haga a fin
+;procedimiento [x;y;z] haga +[x;y;z] fin
 ;declarar (x=2;y=3) haga declarar (t=4;a = procedimiento[x;y;z] haga +[x;y;z] fin) haga evaluar a enviando [1;2;3] fin fin fin
+;declarar (x=2;y=3) haga declarar (t=4; a = procedimiento[x;y;z] haga +[x;y;z] fin) haga +[x;y; evaluar a enviando [1;2;3] fin] fin fin
 
 
 
@@ -336,19 +351,19 @@
 ;-------------------------------------------------------------------
 ;PUNTO 12 B: factorial de un numero n de forma recursiva
 ;-------------------------------------------------------------------
-;letrec
-;fact (x) = Si x entonces *[ x; evaluar fact enviando [-[x;1]] fin] sino 1 fin
+;letrec {
+;factorial (n) = Si n entonces *[ n; evaluar factorial enviando [-[n;1]] fin] sino 1 fin}
 ;in
-;evaluar fact enviando [6] fin
+;evaluar factorial enviando [6] fin
 ;-------------------------------------------------------------------
 
 ;-------------------------------------------------------------------
 ;PUNTO 12 C: multiplicacion con sumas anidadas
 ;-------------------------------------------------------------------
-;letrec
-;multiplicacion (x,y) = Si -[x;1] entonces +[ y; evaluar multiplicacion enviando [-[x;1];y] fin] sino y fin
+;letrec {
+;multiplicacion (x,y) = Si -[x;1] entonces +[ y; evaluar multiplicacion enviando [-[x;1];y] fin] sino y fin}
 ;in
-;evaluar multiplicacion enviando [6;3] fin
+;evaluar multiplicacion enviando [3;4] fin
 ;-------------------------------------------------------------------
 
 
