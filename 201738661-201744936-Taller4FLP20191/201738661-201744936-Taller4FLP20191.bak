@@ -59,6 +59,7 @@
   '((program (expression) a-program)
     (expression (number) number-lit)
     (expression ("\"" text "\"") text-lit)
+    (expression (text) id)
     (expression
      (primitive "[" expression (arbno ";" expression) "]")
      primitive-exp)
@@ -125,6 +126,7 @@
     (cases expression exp
       (number-lit (datum) datum)
       (text-lit (characters) characters)
+      (id (identificador) (string->symbol identificador))
       (primitive-exp (prim exp rands)
                      (if (null? rands)
                          (apply-primitive prim (list (eval-expression exp)))
@@ -159,4 +161,3 @@
         )
     )
   )
-
