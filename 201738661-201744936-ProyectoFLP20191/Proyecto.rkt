@@ -34,7 +34,7 @@
   '((white-sp
      (whitespace) skip)
     (comment
-     ("=begin" (arbno (or "\\=end" (not "=end"))) "=end") skip)
+     ("=begin" (arbno "\\=end") "=end") skip)
     (comment
      ("#" (arbno (not #\newline))) skip)
     (number
@@ -55,9 +55,9 @@
     (expression (number) lit-number)
     (expression (text) lit-id)
     (expression ("\"" text "\"") lit-text)
-    (expression (expression primitive (arbno "\n") expression (arbno "#\n")) primitive-exp)
-    (expression ("if " (arbno "\n") expression "\n" (arbno "\n") expression (arbno "\n") "else " (arbno "\n") expression (arbno "\n") "end" "\n") condicional-exp)
-    (expression (text "=" expression (or (arbno "\n") ";")) variable-exp)
+    ;(expression (expression primitive (arbno "#\newline") expression (arbno "#\newline")) primitive-exp)
+    ;(expression ("if " (arbno "#\newline") expression "#\newline" (arbno "#\newline") expression (arbno "#\newline") "else " (arbno "#\newline") expression (arbno "#\newline") "end" "#\newline") condicional-exp)
+    ;(expression (text "=" expression ";" (arbno "#\newline")) variable-exp)
     (primitive ("+") sum)
     (primitive ("-") subd)
     (primitive ("*") mult)
@@ -98,3 +98,5 @@
                          grammar-syntatic-specification)))
 
 ;*******************************************************************************************
+
+(interpreter)
