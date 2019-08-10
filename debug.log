@@ -1,3 +1,0 @@
-[0624/203646.393:ERROR:file_io_win.cc(179)] CreateFile C:\Program Files (x86)\settings.dat: Acceso denegado. (0x5)
-[0624/203646.407:ERROR:registration_protocol_win.cc(84)] TransactNamedPipe: Ha terminado la canalización. (0x6D)
-[0624/203646.410:ERROR:file_io_win.cc(179)] CreateFile C:\Program Files (x86)\settings.dat: Acceso denegado. (0x5)
