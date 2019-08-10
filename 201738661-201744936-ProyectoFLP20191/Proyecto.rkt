@@ -31,9 +31,7 @@
 ;-------------------------------------------------------------------------------
 
 (define scanner-lexical-specification
-  '((line-break
-     ("\n") skip)
-    (white-sp
+  '((white-sp
      (whitespace) skip)
     (comment
      ("=begin" (arbno (or letter digit #\newline)) "=end") skip)
@@ -57,8 +55,9 @@
     (expression (number) lit-number)
     (expression (text) lit-id)
     (expression ("\"" text "\"") lit-text)
-    ;(expression (expression primitive (arbno "#\newline") expression (arbno "#\newline")) primitive-exp)
-    ;(expression ("if " (arbno "#\newline") expression "#\newline" (arbno "#\newline") expression (arbno "#\newline") "else " (arbno "#\newline") expression (arbno "#\newline") "end" "#\newline") condicional-exp)
+    ;(expression (expression primitive expression) unary-operation)
+    ;(expression (expression line-break primitive expression) primitive-exp)
+    (expression ("if " expression expression "else " expression "end") condicional-exp)
     ;(expression (text "=" expression ";" (arbno "#\newline")) variable-exp)
     (primitive ("+") sum)
     (primitive ("-") subd)
