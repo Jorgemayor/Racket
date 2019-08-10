@@ -5,6 +5,6 @@ Univalle 2019 - 1
 Profesor:
 Robinson Andrey Duque Agudelo
 
-Desarrolladores:
-Jorge Eduardo Mayor Fernández - @Jorgemayor
-Juan Sebastián Velásquez Acevedo - @Odzen
+## Desarrolladores:
+* **Jorge Eduardo Mayor Fernández** - [Jorgemayor](https://github.com/Jorgemayor)
+* **Juan Sebastián Velásquez Acevedo** - [Odzen](https://github.com/Odzen)
