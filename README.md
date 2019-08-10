@@ -6,5 +6,5 @@ Profesor:
 Robinson Andrey Duque Agudelo
 
 Desarrolladores:
-Jorge Eduardo Mayor Fernández - Jorgemayor
-Juan Sebastián Velásquez Acevedo - Odzen
+Jorge Eduardo Mayor Fernández - @Jorgemayor
+Juan Sebastián Velásquez Acevedo - @Odzen
