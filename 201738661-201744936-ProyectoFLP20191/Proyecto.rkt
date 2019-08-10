@@ -31,10 +31,12 @@
 ;-------------------------------------------------------------------------------
 
 (define scanner-lexical-specification
-  '((white-sp
+  '((line-break
+     ("\n") skip)
+    (white-sp
      (whitespace) skip)
     (comment
-     ("=begin" (arbno "\\=end") "=end") skip)
+     ("=begin" (arbno (or letter digit #\newline)) "=end") skip)
     (comment
      ("#" (arbno (not #\newline))) skip)
     (number
