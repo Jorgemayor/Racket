@@ -31,7 +31,7 @@
 ;-------------------------------------------------------------------------------
 
 (define scanner-lexical-specification
-  '((white-sp
+  '( (white-sp
      (whitespace) skip)
     (comment
      ("=begin" (arbno (or letter digit #\newline)) "=end") skip)
@@ -52,17 +52,24 @@
 
 (define grammar-syntatic-specification
   '((programa (expression) a-program)
+    ;(programa ("R" exp-batch "EOP") a-program)
+    (exp-batch (expression (arbno expression)) a-batch)
     (expression (number) lit-number)
     (expression (text) lit-id)
     (expression ("\"" text "\"") lit-text)
-    ;(expression (expression primitive expression) unary-operation)
-    ;(expression (expression line-break primitive expression) primitive-exp)
-    (expression ("if " expression expression "else " expression "end") condicional-exp)
-    ;(expression (text "=" expression ";" (arbno "#\newline")) variable-exp)
+    (expression ("var" text "=" expression ";") variable-exp)
+    (expression (primitive expression) unary-expression)
+    
+    (expression ("if"  expression (arbno "then") expression "else" expression "end") condicional-exp)
+
+    (expression ( "(" expression primitive expression ")") primitive-exp)
+    
     (primitive ("+") sum)
     (primitive ("-") subd)
     (primitive ("*") mult)
     (primitive ("/") div)
+
+    ;(unary-operation ("not") not-op)
     )
   )
 
