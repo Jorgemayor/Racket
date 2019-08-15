@@ -51,25 +51,70 @@
 
 
 (define grammar-syntatic-specification
-  '((programa (expression) a-program)
+  '(
+    (program (expression) a-program)
+    ;(expression (expression-simple) simple-expression)
     ;(programa ("R" exp-batch "EOP") a-program)
-    (exp-batch (expression (arbno expression)) a-batch)
+    ;(exp-batch (expression (arbno expression)) a-batch)
+    ;(expression (expression-assign) aggign-expression)
     (expression (number) lit-number)
     (expression (text) lit-id)
+    (expression ("true") true-val)
+    (expression ("false") false-val)
+    (expression ("nil") nil-val)
     (expression ("\"" text "\"") lit-text)
-    (expression ("var" text "=" expression ";") variable-exp)
-    (expression (primitive expression) unary-expression)
+    (expression ("declare" text "=" expression ";") variable-exp)
+    (expression (unary-operation expression) unary-expression)
+    (expression ("if"   expression  (arbno "then") expression
+                        (arbno "elsif" expression (arbno "then") expression )
+                        "else" expression "end") condicional-exp)
+    (expression ("puts" (separated-list expression ",") ";") print-expression)
+    (expression ("(" expression primitive-bin expression ")") primitive-exp)
+    (expression ("for" text "in" number ".." number expression "end") for-exp)
+    (expression ("return" expression ";") return-exp)
+    (expression ("def" text "(" (separated-list text ",") ")" expression "end") proc-exp)
     
-    (expression ("if"  expression (arbno "then") expression "else" expression "end") condicional-exp)
+    (primitive-bin ("+") sum)
+    (primitive-bin ("-") subd)
+    (primitive-bin ("*") mult)
+    (primitive-bin ("/") div)
+    (primitive-bin ("%") mod)
+    (primitive-bin ("**") pow)
+    (primitive-bin (">") higher)
+    (primitive-bin (">=") higher-eq)
+    (primitive-bin ("<") less)
+    (primitive-bin ("<=") less-eq)
+    (primitive-bin ("==") equal)
+    (primitive-bin ("!=") different)
+    (primitive-bin ("and") and)
+    (primitive-bin ("&&") and)
+    (primitive-bin ("or") or)
+    (primitive-bin ("||") or)
+    (primitive-bin ("..") in-range)
+ 
+    ;(assign-op ("+=") add-eq)
+    ;(assign-op ("-=") diff-eq)
+    ;(assign-op ("*=") mult-eq)
+    ;(assign-op ("/=") div-eq)
+    ;(assign-op ("**=") pow-eq)
 
-    (expression ( "(" expression primitive expression ")") primitive-exp)
+    (unary-operation ("not") not-op)
+    (unary-operation ("!") not-op)
+
     
-    (primitive ("+") sum)
-    (primitive ("-") subd)
-    (primitive ("*") mult)
-    (primitive ("/") div)
+    ;(expression-simple (prim-value (arbno complement) ";") primitive-bin-expression)
+    ;(expression-simple (prim-value ) primitive-bin123)
+    ;(expression-simple (prim-value (arbno complement) ";") primitive-bin-expression)
+    
+    ;(prim-value ("\"" text "\"") text-value)
+    ;(prim-value (text) id-value)
+    ;(prim-value (number) number-value)
 
-    ;(unary-operation ("not") not-op)
+    ;(complement ("=" expression) assign)
+    ;(complement (primitive-bin expression) prim-op)
+    
+
+    
     )
   )
 
