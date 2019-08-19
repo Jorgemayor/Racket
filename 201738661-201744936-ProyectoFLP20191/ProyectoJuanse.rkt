@@ -12,20 +12,79 @@
 ; Code: 201744936
 
 ;-------------------------------------------------------------------------------
-;;<program> := (a-program) <expression>
+;;<program> := (a-program) < / exp-batch />
+
+;;<exp-batch>:= (a-batch) <expression> (expression)*
 
 
 ;;<expression> := (lit-number) <number>
-;;             := (lit-id) <identifier>
-;;             := (lit-text) "<letters>"
-;;             := (primitive-exp) expression <primitive> (\n)* expression (or ; \n) (\n)*
-;;             := (condicional-exp) if (\n)* <expression> (\n)* <expresion> (or ; (\n)*) else (\n)* <expresion> (or ; (\n)*) end
-;;             := (variable-exp) <identifier> = (\n)* <expression> (or ; \n) (\n)*
+;;             := (expHex) <expressionHex>
+;;             := (expOct) <expressionOct>
+;;             := (lit-id) <text>
+;;             := (lit-text) "<text>"
+;;             := (true-val) true
+;;             := (false-val) false
+;;             := (empty-val) nil
+;;             := (variable-exp) $ <letters> <assign-op> <expression> ;
+;;             := (unary-expression) <unary-operation> <expression> ;
+;;             := (condicional-exp) if <expression> then* <exp-batch>
+;;                                  (elsif <expression> then* <exp-batch>)*
+;;                                   else <exp-batch> end
+;;             := (print-expression) puts  (<expression> ,)* ;
+;;             := (primitive-exp) (<expression> <primitive-bin> <expression> <expression>* )
+;;             := (expPrimitiveString) [ <expression> <primitiveString> <expression>* ]
+;;             := (for-exp) for <text> in <number> .. <number> <exp-batch> end
+;;             := (proc-exp) def <text> ( (<text> ,)* ) <exp-batch> end
+;;             := (evalProc-exp) {  <text> ( (<expression> ,)* ) }
+;;             := (primitive8) prim8 <expressionOct> <primitiveOct> <expressionOct> <expressionOct>* ;
+;;             := (primitive16) prim16 <expressionHex> <primitiveHex> <expressionHex> <expressionHex>* ;
 
-;;<primitive> := (sum) +
-;;            := (subs) -
-;;            := (div) /
-;;            := (mult) *
+;; <expressionHex> := (hex-number) (hex (number ,)* )
+;; <expressionOct> := (oct-number) (oct (number ,)* )
+
+;;<primitive-bin> := (sum) +
+;;                := (subd) -
+;;                := (mult) *
+;;                := (div) /
+;;                := (mod) %
+;;                := (pow) **
+;;                := (higher) >
+;;                := (higher-eq) >=
+;;                := (less) <
+;;                := (less-eq) <=
+;;                := (equal) ==
+;;                := (different) !=
+;;                := (and) and
+;;                := (and) &&
+;;                := (or) or
+;;                := (or) ||
+;;                := (in-range) ..
+
+;;<primitiveOct>  := (sum8) +8+
+;;                := (rest8) -8-
+;;                := (mult8) *8*
+;;                := (plusOne8) ++8++
+;;                := (restOne8) --8--
+
+;;<primitiveHex>  := (sum16) +16+
+;;                := (rest16) -16-
+;;                := (mult16) *16*
+;;                := (plusOne16) ++16++
+;;                := (restOne16) --16--
+
+;;<primitiveString>  := (sizeString) .length
+;;                   := (concatString) +
+
+;;<assign-op>  := (declarative-opp) =
+;;             := (add-eq) +=
+;;             := (diff-eq) -=
+;;             := (mult-eq) *=
+;;             := (div-eq) /=
+;;             := (pow-eq) **=
+
+;;<unary-operation>  := (not-op) not
+;;                   := (not-op) !
+
 
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
@@ -64,7 +123,7 @@
     (expression ("false") false-val)
     (expression ("nil") empty-val)
     (expression ("$" text assign-op expression ";") variable-exp)
-    (expression (unary-operation expression) unary-expression)
+    (expression (unary-operation expression ";") unary-expression)
     (expression ("if"   expression  (arbno "then") exp-batch
                         (arbno "elsif" expression (arbno "then") exp-batch )
                         "else" exp-batch "end") condicional-exp)
@@ -74,7 +133,7 @@
     (expression ("for" text "in" number ".." number exp-batch "end") for-exp)
     ;(expression ("return" expression ";") return-exp) ; revision
     (expression ("def" text "(" (separated-list text ",") ")" exp-batch "end") proc-exp)
-    (expression ("{" expression "(" (separated-list expression ",") ")" "}") evalProc-exp) ; revision
+    (expression ("{" text "(" (separated-list expression ",") ")" "}") evalProc-exp) ; revision
     (expression ("prim8" expressionOct primitiveOct expressionOct (arbno expressionOct)";") primitive8) ; revision
     (expression ("prim16" expressionHex primitiveHex expressionHex  (arbno expressionHex)";") primitive16); revision
     (expressionHex ("(hex"  (separated-list number "," )  ")") hex-number )
