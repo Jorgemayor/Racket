@@ -31,7 +31,7 @@
 ;;                                  (elsif <expression> then* <exp-batch>)*
 ;;                                   else <exp-batch> end
 ;;             := (print-expression) puts  (<expression> ,)* ;
-;;             := (primitive-exp) (<expression> <primitive-bin> <expression> <expression>* )
+;;             := (primitive-exp) (<expression> <primitive-bin> <expression> ( <primitive-bin> <expression>)* )
 ;;             := (expPrimitiveString) [ <expression> <primitiveString> <expression>* ]
 ;;             := (for-exp) for <text> in <number> .. <number> <exp-batch> end
 ;;             := (proc-exp) def <text> ( (<text> ,)* ) <exp-batch> end
@@ -128,7 +128,7 @@
                         (arbno "elsif" expression (arbno "then") exp-batch )
                         "else" exp-batch "end") condicional-exp)
     (expression ("puts" (separated-list expression ",") ";") print-expression)
-    (expression ("(" expression primitive-bin expression (arbno expression) ")") primitive-exp)
+    (expression ("(" expression primitive-bin expression (arbno primitive-bin expression) ")") primitive-exp)
     (expression ("[" expression primitiveString (arbno expression)  "]") expPrimitiveString) ; Revisión 
     (expression ("for" text "in" number ".." number exp-batch "end") for-exp)
     ;(expression ("return" expression ";") return-exp) ; revision
@@ -258,14 +258,15 @@
   (lambda (exp listOfExps env)
     (cases expression exp
     (lit-number (number)  number  ) ; revisar el batch
-    (lit-id (id) (apply-env id env) )  ; revisar el batch
+    (lit-id (id) (apply-env env (string->symbol id) ) )  ; revisar el batch
     (lit-text (text)   text)  ; revisar el batch
     (true-val () #t )  ; revisar el batch
     (false-val () #f )  ; revisar el batch
-    (expOct (octRepresentation) (evalOct octRepresentation) (eval-exps listOfExps env))
-    (expHex (hexRepresentation) (evalHex hexRepresentation) (eval-exps listOfExps env))
-    (empty-val () (eopl:pretty-print '=>nil) (eval-exps listOfExps env))
-    (variable-exp (id assign body) id (eval-exps listOfExps env))
+    (expOct (octRepresentation) (evalOct octRepresentation) )
+    (expHex (hexRepresentation) (evalHex hexRepresentation) )
+    (empty-val () (eopl:pretty-print '=>nil) )
+    (variable-exp (id assign body) (applyAssigns-primitive (listOfString->listOfSymbols (list id)) assign (list (eval-expressions body empty env)) env)
+                                    (eval-exps listOfExps (extend-env (listOfString->listOfSymbols (list id)) (list (eval-expressions body empty env)) env)))
     (unary-expression (unary-op body) unary-op (eval-exps listOfExps env))
     (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) test-exp (eval-exps listOfExps env))
     (print-expression (listExps)
@@ -276,7 +277,7 @@
           listExps
         )
         (eval-exps listOfExps env) ) ; Puts funciona bien con el batch
-    (primitive-exp (exp1 op exp2 rands)
+    (primitive-exp (exp1 op exp2 op2 rands)
                    (let (
                          (value1 (eval-expressions exp1 empty env))
                          (value2 (eval-expressions exp2 empty env))
@@ -419,11 +420,15 @@
 
 ;;Evaluate primitives of assigns 
 (define applyAssigns-primitive
-  (lambda (exp1 exp2 prim args)
-    (if (null? (args))
-        1
-        0
-        )
+  (lambda (id assign body env)
+    (cases assign-op assign
+      (declarative-opp ()(extend-env id body env) )
+      (add-eq ()0 )
+      (diff-eq ()0 )
+      (mult-eq ()0 )
+      (div-eq ()0 )
+      (pow-eq ()0 )
+      )
     )
   )
 
