@@ -14,7 +14,7 @@
 ;-------------------------------------------------------------------------------
 ;;<program> := (a-program) < / exp-batch />
 
-;;<exp-batch>:= (a-batch) (expression)*
+;;<exp-batch>:= (a-batch) <expression> (expression)*
 
 
 ;;<expression> := (lit-number) <number>
@@ -27,24 +27,19 @@
 ;;             := (empty-val) nil
 ;;             := (set-dec-exp) $ <letters> <assign-op> <expression> ;
 ;;             := (unary-expression) <unary-operation> <expression> ;
-;;             := (condicional-exp) if <expression> then <exp-batch>
-;;                                  (elsif <expression> then <exp-batch>)*
+;;             := (condicional-exp) if <expression> then* <exp-batch>
+;;                                  (elsif <expression> then* <exp-batch>)*
 ;;                                   else <exp-batch> end
-;;             := (print-expression) puts  <expression> ;
-;;             := (print-expression) puts  (<expression> ,)* <expresion> ;
-;;             := (primitive-exp) (<expression> <binary-op> <expression> (<binary-op> <expression>)* )
-;;             := (expPrimitiveString) [<expression> <primitiveString>]
+;;             := (print-expression) puts  (<expression> ,)* ;
+;;             := (primitive-exp) (<expression> <binary-op> <expression> ( <binary-op> <expression>)* )
+;;             := (expPrimitiveString) [ <expression> <primitiveString> <expression>* ]
 ;;             := (for-exp) for <text> in <number> .. <number> <exp-batch> end
-;;             := (proc-exp) def <text> (<text>) <exp-batch> end
-;;             := (proc-exp) def <text> ( (<text> ,)* <text>) <exp-batch> end
-;;             := (evalProc-exp) { <text> (<expression>) }
-;;             := (evalProc-exp) { <text> ( (<expression> ,)* <expression>) }
-;;             := (primitive8) prim8 <expressionOct> <primitiveOct> <expressionOct> (<primitiveOct> <expressionOct>)* ;
-;;             := (primitive16) prim16 <expressionHex> <primitiveHex> <expressionHex> (<primitiveHex> <expressionHex>)* ;
+;;             := (proc-exp) def <text> ( (<text> ,)* ) <exp-batch> end
+;;             := (evalProc-exp) {  <text> ( (<expression> ,)* ) }
+;;             := (primitive8) prim8 <expressionOct> <primitiveOct> <expressionOct> <expressionOct>* ;
+;;             := (primitive16) prim16 <expressionHex> <primitiveHex> <expressionHex> <expressionHex>* ;
 
-;; <expressionHex> := (hex-number) (hex number)
 ;; <expressionHex> := (hex-number) (hex (number ,)* )
-;; <expressionOct> := (oct-number) (oct number)
 ;; <expressionOct> := (oct-number) (oct (number ,)* )
 
 ;;<binary-op> := (sum) +
@@ -59,10 +54,10 @@
 ;;            := (less-eq) <=
 ;;            := (equal) ==
 ;;            := (different) !=
-;;            := (and-op) and
-;;            := (and-op) &&
-;;            := (or-op) or
-;;            := (or-op) ||
+;;            := (and) and
+;;            := (and) &&
+;;            := (or) or
+;;            := (or) ||
 ;;            := (in-range) ..
 
 ;;<primitiveOct>  := (sum8) +8+
@@ -78,6 +73,7 @@
 ;;                := (restOne16) --16--
 
 ;;<primitiveString>  := (sizeString) .length
+;;                   := (concatString) +
 
 ;;<assign-op>  := (declarative-opp) =
 ;;             := (add-eq) +=
@@ -130,13 +126,14 @@
     (expression ("nil") empty-val)
     (expression ("$" text assign-op expression ";") set-dec-exp)
     (expression (unary-operation expression ";") unary-expression)
-    (expression ("if" expression "then" exp-batch
-                      (arbno "elsif" expression "then" exp-batch)
-                      "else" exp-batch "end") condicional-exp)
+    (expression ("if"   expression  (arbno "then") exp-batch
+                        (arbno "elsif" expression (arbno "then") exp-batch)
+                        "else" exp-batch "end") condicional-exp)
     (expression ("puts" (separated-list expression ",") ";") print-expression)
     (expression ("(" expression binary-op expression (arbno binary-op expression) ")") primitive-exp)
     (expression ("[" expression primitiveString "]") expPrimitiveString) ; Revisión
     (expression ("for" text "in" number ".." number exp-batch "end") for-exp)
+    ;(expression ("return" expression ";") return-exp) ; revision
     (expression ("def" text "(" (separated-list text ",") ")" exp-batch "end") proc-exp)
     (expression ("{" text "(" (separated-list expression ",") ")" "}") evalProc-exp) ; revision
     (expression ("prim8" expressionOct primitiveOct expressionOct (arbno primitiveOct expressionOct)";") primitive8) ; revision
@@ -144,6 +141,8 @@
     
     (expressionHex ("(hex"  (separated-list number "," )  ")") hex-number )
     (expressionOct ( "(oct" (separated-list number ",") ")") oct-number )
+    
+    
     
     (binary-op ("+") sum)
     (binary-op ("-") subd)
@@ -157,10 +156,10 @@
     (binary-op ("<=") less-eq)
     (binary-op ("==") equal)
     (binary-op ("!=") different)
-    (binary-op ("and") and-op)
-    (binary-op ("&&") and-op)
-    (binary-op ("or") or-op)
-    (binary-op ("||") or-op)
+    ;(binary-op ("and") and)
+    (binary-op ("&&") and1)
+    ;(binary-op ("or") or)
+    (binary-op ("||") or1)
     (binary-op ("..") in-range)
 
     (primitiveOct ("+8+") sum8); revision
@@ -249,16 +248,10 @@
 (define (eval-batch batch env)
   (cases exp-batch batch
     (a-batch (exps) 
-      (if (null? exps) (eopl:pretty-print '=>nil) (aux-print (map (lambda (x) (eval-expressions x env)) exps)))
+      (if (null? exps) (eopl:pretty-print '=>nil) (eval-expressions (car exps) env))
     )
   )
 )
-
-(define aux-print
- (lambda (toPrint)
-   (map (lambda (x) (eopl:pretty-print x)) toPrint)
-   )
-  )
 
 ;eval-expression: <expresion> <ambiente>-> number || string || cerradura
 ; Purpose: Evaluate the expression using cases to determine which datatype is,
@@ -281,7 +274,7 @@
       (print-expression (listExps)
                         (map 
                          (lambda (x) 
-                           (eopl:pretty-print (eval-expressions x env))
+                           (eopl:pretty-print (eval-expressions x empty env))
                            ) 
                          listExps
                          )
@@ -304,6 +297,15 @@
       )
     )
   )
+
+(define eval-exps
+  (lambda (exps env)
+    (cond 
+      [(null? exps) "Process finished with exit code 0"]
+      [else (eval-expressions (car exps) (cdr exps) env)]
+    )
+  )
+)
 
 (define evalHex
   (lambda (sintHex)
@@ -365,8 +367,8 @@
           (less-eq ()  (string-length (car args)))
           (equal ()  (string-length (car args)))
           (different ()  (string-length (car args)))
-          (and-op ()  (string-length (car args)))
-          (or-op ()  (string-length (car args)))
+          (and1 ()  (string-length (car args)))
+          (or1 ()  (string-length (car args)))
           (in-range ()  (string-length (car args)))
           
           )
