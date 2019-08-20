@@ -25,13 +25,13 @@
 ;;             := (true-val) true
 ;;             := (false-val) false
 ;;             := (empty-val) nil
-;;             := (variable-exp) $ <letters> <assign-op> <expression> ;
+;;             := (set-dec-exp) $ <letters> <assign-op> <expression> ;
 ;;             := (unary-expression) <unary-operation> <expression> ;
 ;;             := (condicional-exp) if <expression> then* <exp-batch>
 ;;                                  (elsif <expression> then* <exp-batch>)*
 ;;                                   else <exp-batch> end
 ;;             := (print-expression) puts  (<expression> ,)* ;
-;;             := (primitive-exp) (<expression> <primitive-bin> <expression> ( <primitive-bin> <expression>)* )
+;;             := (primitive-exp) (<expression> <binary-op> <expression> ( <binary-op> <expression>)* )
 ;;             := (expPrimitiveString) [ <expression> <primitiveString> <expression>* ]
 ;;             := (for-exp) for <text> in <number> .. <number> <exp-batch> end
 ;;             := (proc-exp) def <text> ( (<text> ,)* ) <exp-batch> end
@@ -42,23 +42,23 @@
 ;; <expressionHex> := (hex-number) (hex (number ,)* )
 ;; <expressionOct> := (oct-number) (oct (number ,)* )
 
-;;<primitive-bin> := (sum) +
-;;                := (subd) -
-;;                := (mult) *
-;;                := (div) /
-;;                := (mod) %
-;;                := (pow) **
-;;                := (higher) >
-;;                := (higher-eq) >=
-;;                := (less) <
-;;                := (less-eq) <=
-;;                := (equal) ==
-;;                := (different) !=
-;;                := (and) and
-;;                := (and) &&
-;;                := (or) or
-;;                := (or) ||
-;;                := (in-range) ..
+;;<binary-op> := (sum) +
+;;            := (subd) -
+;;            := (mult) *
+;;            := (div) /
+;;            := (mod) %
+;;            := (pow) **
+;;            := (higher) >
+;;            := (higher-eq) >=
+;;            := (less) <
+;;            := (less-eq) <=
+;;            := (equal) ==
+;;            := (different) !=
+;;            := (and) and
+;;            := (and) &&
+;;            := (or) or
+;;            := (or) ||
+;;            := (in-range) ..
 
 ;;<primitiveOct>  := (sum8) +8+
 ;;                := (rest8) -8-
@@ -122,13 +122,13 @@
     (expression ("true") true-val)
     (expression ("false") false-val)
     (expression ("nil") empty-val)
-    (expression ("$" text assign-op expression ";") variable-exp)
+    (expression ("$" text assign-op expression ";") set-dec-exp)
     (expression (unary-operation expression ";") unary-expression)
     (expression ("if"   expression  (arbno "then") exp-batch
                         (arbno "elsif" expression (arbno "then") exp-batch )
                         "else" exp-batch "end") condicional-exp)
     (expression ("puts" (separated-list expression ",") ";") print-expression)
-    (expression ("(" expression primitive-bin expression (arbno primitive-bin expression) ")") primitive-exp)
+    (expression ("(" expression binary-op expression (arbno binary-op expression) ")") primitive-exp)
     (expression ("[" expression primitiveString (arbno expression)  "]") expPrimitiveString) ; Revisión 
     (expression ("for" text "in" number ".." number exp-batch "end") for-exp)
     ;(expression ("return" expression ";") return-exp) ; revision
@@ -140,23 +140,23 @@
     (expressionOct ( "(oct" (separated-list number ",") ")") oct-number )
     
     
-    (primitive-bin ("+") sum)
-    (primitive-bin ("-") subd)
-    (primitive-bin ("*") mult)
-    (primitive-bin ("/") div)
-    (primitive-bin ("%") mod)
-    (primitive-bin ("**") pow)
-    (primitive-bin (">") higher)
-    (primitive-bin (">=") higher-eq)
-    (primitive-bin ("<") less)
-    (primitive-bin ("<=") less-eq)
-    (primitive-bin ("==") equal)
-    (primitive-bin ("!=") different)
-    (primitive-bin ("and") and)
-    (primitive-bin ("&&") and)
-    (primitive-bin ("or") or)
-    (primitive-bin ("||") or)
-    (primitive-bin ("..") in-range)
+    (binary-op ("+") sum)
+    (binary-op ("-") subd)
+    (binary-op ("*") mult)
+    (binary-op ("/") div)
+    (binary-op ("%") mod)
+    (binary-op ("**") pow)
+    (binary-op (">") higher)
+    (binary-op (">=") higher-eq)
+    (binary-op ("<") less)
+    (binary-op ("<=") less-eq)
+    (binary-op ("==") equal)
+    (binary-op ("!=") different)
+    (binary-op ("and") and)
+    (binary-op ("&&") and)
+    (binary-op ("or") or)
+    (binary-op ("||") or)
+    (binary-op ("..") in-range)
 
     (primitiveOct ("+8+") sum8); revision
     (primitiveOct ("-8-") rest8); revision
@@ -229,7 +229,7 @@
   (lambda (pgm)
     (cases program pgm
       (a-program (body)
-                   (eval-batch body (init-env))))))
+                 (eval-batch body (init-env))))))
 
 ; Initial Enviroment
 (define init-env
@@ -265,7 +265,7 @@
     (expOct (octRepresentation) (evalOct octRepresentation) )
     (expHex (hexRepresentation) (evalHex hexRepresentation) )
     (empty-val () (eopl:pretty-print '=>nil) )
-    (variable-exp (id assign body) (applyAssigns-primitive (listOfString->listOfSymbols (list id)) assign (list (eval-expressions body empty env)) env)
+    (set-dec-exp (id assign body) (applyAssigns-primitive (listOfString->listOfSymbols (list id)) assign (list (eval-expressions body empty env)) env)
                                     (eval-exps listOfExps (extend-env (listOfString->listOfSymbols (list id)) (list (eval-expressions body empty env)) env)))
     (unary-expression (unary-op body) unary-op (eval-exps listOfExps env))
     (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) test-exp (eval-exps listOfExps env))
@@ -351,7 +351,7 @@
 (define apply-primitive
   (lambda (exp1 exp2 prim args)
     (if (null? empty)
-        (cases primitive-bin prim
+        (cases binary-op prim
           (sum () (+ exp1 exp2))
           (subd () (- (car args) (apply-primitive prim (cdr args))))
           (mult () (* (car args) (apply-primitive prim (cdr args))))

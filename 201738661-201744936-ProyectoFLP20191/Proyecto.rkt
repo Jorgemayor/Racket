@@ -31,8 +31,10 @@
 ;-------------------------------------------------------------------------------
 
 (define scanner-lexical-specification
-  '( (white-sp
-     (whitespace) skip)
+  '((line-break
+     ("#\newline") skip)
+    (blank
+     (" ") skip)
     (comment
      ("=begin" (arbno (or letter digit #\newline)) "=end") skip)
     (comment
@@ -52,10 +54,11 @@
 
 (define grammar-syntatic-specification
   '(
-    (beginsWithExp (expression restOfExp) a-program)
-    ;(restOfExp ((arbno expression)) a-batch)
-    (restOfExp (";") print-expression)
-    (restOfExp (binary-op expression) primitive-exp)
+    (beginsWithExp ((arbno "\n") expression options) a-program)
+    ;(batch (arbno expression "}") a-batch)
+    (options "\n" lb)
+    (options (restOfExp) roe)
+    (restOfExp (binary-op expression ";") primitive-exp)
     (restOfExp ("=" expression ";") variable-exp)
     (restOfExp ("+=" expression ";") add-assign)
     (restOfExp ("-=" expression ";") diff-eq)
@@ -70,7 +73,7 @@
     (expression ("nil") nil-val)
     (expression ("\"" text "\"") lit-text)
     (expression (unary-operation expression) unary-expression)
-    (expression ("if"   expression  (arbno "then") expression
+    (expression ("if"   expression  (arbno "then") (arbno expression)
                         (arbno "elsif" expression (arbno "then") expression)
                         "else" expression "end") condicional-exp)
     (expression ("puts" expression ";") print-expression-puts)
