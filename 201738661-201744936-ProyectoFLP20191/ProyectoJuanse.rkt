@@ -32,7 +32,7 @@
 ;;                                   else <exp-batch> end
 ;;             := (print-expression) puts  <expression> ;
 ;;             := (print-expression) puts  (<expression> ,)* <expresion> ;
-;;             := (primitive-exp) (<expression> <binary-op> <expression> (<binary-op> <expression>)* )
+;;             := (primitive-exp) (<expression> <binary-op> <expression>)
 ;;             := (expPrimitiveString) [<expression> <primitiveString>]
 ;;             := (for-exp) for <text> in <number> .. <number> <exp-batch> end
 ;;             := (proc-exp) def <text> (<text>) <exp-batch> end
@@ -51,7 +51,7 @@
 ;;            := (subd) -
 ;;            := (mult) *
 ;;            := (div) /
-;;            := (mod) %
+;;            := (mod-op) %
 ;;            := (pow) **
 ;;            := (higher) >
 ;;            := (higher-eq) >=
@@ -134,7 +134,7 @@
                       (arbno "elsif" expression "then" exp-batch)
                       "else" exp-batch "end") condicional-exp)
     (expression ("puts" (separated-list expression ",") ";") print-expression)
-    (expression ("(" expression binary-op expression (arbno binary-op expression) ")") primitive-exp)
+    (expression ("(" expression binary-op expression ")") primitive-exp)
     (expression ("[" expression primitiveString "]") expPrimitiveString) ; Revisión
     (expression ("for" text "in" number ".." number exp-batch "end") for-exp)
     (expression ("def" text "(" (separated-list text ",") ")" exp-batch "end") proc-exp)
@@ -149,7 +149,7 @@
     (binary-op ("-") subd)
     (binary-op ("*") mult)
     (binary-op ("/") div)
-    (binary-op ("%") mod)
+    (binary-op ("%") mod-op)
     (binary-op ("**") pow)
     (binary-op (">") higher)
     (binary-op (">=") higher-eq)
@@ -249,7 +249,7 @@
 (define (eval-batch batch env)
   (cases exp-batch batch
     (a-batch (exps) 
-      (if (null? exps) (eopl:pretty-print '=>nil) (aux-print (map (lambda (x) (eval-expressions x env)) exps)))
+      (if (null? exps) (eopl:pretty-print '=>nil) (aux-print2 exps env))
     )
   )
 )
@@ -257,6 +257,15 @@
 (define aux-print
  (lambda (toPrint)
    (map (lambda (x) (eopl:pretty-print x)) toPrint)
+   )
+  )
+
+(define aux-print2
+ (lambda (toPrint env)
+   (cond [(null? toPrint) "Succesfully executed"]
+         [#true (eopl:pretty-print (eval-expressions (car toPrint) env))
+ 
+                (aux-print2 (cdr toPrint) env)])
    )
   )
 
@@ -275,7 +284,7 @@
       (expHex (hexRepresentation) (evalHex hexRepresentation))
       (empty-val () (eopl:pretty-print '=>nil))
       (set-dec-exp (id assign body)
-                   (applyAssigns-primitive (listOfString->listOfSymbols (list id)) assign (list (eval-expressions body empty env)) env))
+                   (applyAssigns-primitive (listOfString->listOfSymbols (list id)) assign (list (eval-expressions body env)) env))
       (unary-expression (unary-op body) unary-op)
       (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) test-exp)
       (print-expression (listExps)
@@ -286,14 +295,11 @@
                          listExps
                          )
                         ) ;Puts funciona bien con el batch
-      (primitive-exp (exp1 op exp2 op2 rands)
+      (primitive-exp (exp1 op exp2)
                      (let ((value1 (eval-expressions exp1 env))
                            (value2 (eval-expressions exp2 env))
                            )
-                       (if (null? rands)
-                           (apply-primitive value1 value2 op rands)
-                           (apply-primitive value1 value2 op (map (lambda (x) (eval-expressions x env)) rands)))
-                       )
+                           (apply-primitive value1 value2 op))
                      )
       (expPrimitiveString (exp op) (applyString-primitive (eval-expressions exp) op))
       (for-exp (iterator numberRange1 numberRange2 body) iterator)
@@ -344,37 +350,30 @@
 ; This procedure is used in  eval-expression.
 
 (define apply-primitive
-  (lambda (exp1 exp2 prim args)
-    (if (null? args)
+  (lambda (exp1 exp2 prim)
         (cases binary-op prim
           (sum () 
-               (if (and (string? exp1) (string? exp2))
+               (if (string? exp1)
                    (string-append exp1 exp2)
-                   (+ exp1 exp2)
-                           
+                   (+ exp1 exp2 )
                    )
-          )
-          (subd () (- (car args) (apply-primitive prim (cdr args))))
-          (mult () (* (car args) (apply-primitive prim (cdr args))))
-          (div () (/ (car args) (apply-primitive prim (cdr args))))
-          (mod () (string-append (car args) (apply-primitive prim (cdr args))))
-          (pow ()  (string-length (car args)))
-          (higher ()  (string-length (car args)))
-          (higher-eq ()  (string-length (car args)))
-          (less ()  (string-length (car args)))
-          (less-eq ()  (string-length (car args)))
-          (equal ()  (string-length (car args)))
-          (different ()  (string-length (car args)))
-          (and-op ()  (string-length (car args)))
-          (or-op ()  (string-length (car args)))
-          (in-range ()  (string-length (car args)))
-          
-          )
-        0
-        
-        )
-    )
-  )
+               )
+          (subd () (- exp1 exp2))
+          (mult () (* exp1 exp2))
+          (div () (/ exp1 exp2))
+          (mod-op () (mod exp1 exp2))
+          (pow ()  (exp exp1 exp2))
+          (higher ()  ( exp1 exp2))
+          (higher-eq ()  ( exp1 exp2))
+          (less ()  ( exp1 exp2))
+          (less-eq () ( exp1 exp2) )
+          (equal ()  ( exp1 exp2))
+          (different ()( exp1 exp2)  )
+          (and-op ()  ( exp1 exp2))
+          (or-op ()  ( exp1 exp2))
+          (in-range () ( exp1 exp2) )
+    ) 
+  ))
 ;;Evaluate primitives for strings 
 (define applyString-primitive
   (lambda (exp1 prim )
