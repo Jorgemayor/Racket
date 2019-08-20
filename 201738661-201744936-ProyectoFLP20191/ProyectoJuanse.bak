@@ -113,7 +113,7 @@
   '(
     (program ( "/" exp-batch  "/") a-program)
     
-    (exp-batch ((arbno expression)) a-batch) ;cambio
+    (exp-batch (expression (arbno expression)) a-batch)
     
     (expression (number) lit-number)
     (expression (expressionHex) expHex)
@@ -143,7 +143,6 @@
     (expressionOct ( "(oct" (separated-list number ",") ")") oct-number )
     
     
-    
     (binary-op ("+") sum)
     (binary-op ("-") subd)
     (binary-op ("*") mult)
@@ -156,10 +155,10 @@
     (binary-op ("<=") less-eq)
     (binary-op ("==") equal)
     (binary-op ("!=") different)
-    ;(binary-op ("and") and)
-    (binary-op ("&&") and1)
-    ;(binary-op ("or") or)
-    (binary-op ("||") or1)
+    (binary-op ("and") and)
+    (binary-op ("&&") and)
+    (binary-op ("or") or)
+    (binary-op ("||") or)
     (binary-op ("..") in-range)
 
     (primitiveOct ("+8+") sum8); revision
@@ -247,8 +246,8 @@
 ;eval-exp-batch:
 (define (eval-batch batch env)
   (cases exp-batch batch
-    (a-batch (exps) 
-      (if (null? exps) (eopl:pretty-print '=>nil) (eval-expressions (car exps) env))
+    (a-batch (e exps) 
+      (if (null? exps) empty-val (eval-expressions e exps env))
     )
   )
 )
@@ -280,15 +279,15 @@
                          )
                         ) ;Puts funciona bien con el batch
       (primitive-exp (exp1 op exp2 op2 rands)
-                     (let ((value1 (eval-expressions exp1 env))
-                           (value2 (eval-expressions exp2 env))
+                     (let ((value1 (eval-expressions exp1 empty env))
+                           (value2 (eval-expressions exp2 empty env))
                            )
                        (if (null? rands)
                            (apply-primitive value1 value2 op rands)
                            (apply-primitive value1 value2 op (map (lambda (x) (eval-expressions x env)) rands)))
                        )
                      )
-      (expPrimitiveString (exp op) (applyString-primitive (eval-expressions exp) op))
+      (expPrimitiveString (exp op) (length exp))
       (for-exp (iterator numberRange1 numberRange2 body) iterator)
       (proc-exp (id args body) id)
       (evalProc-exp (id args) id)
@@ -347,15 +346,9 @@
 
 (define apply-primitive
   (lambda (exp1 exp2 prim args)
-    (if (null? args)
+    (if (null? empty)
         (cases binary-op prim
-          (sum () 
-               (if (and (string? exp1) (string? exp2))
-                   (string-append exp1 exp2)
-                   (+ exp1 exp2)
-                           
-                   )
-          )
+          (sum () (+ exp1 exp2))
           (subd () (- (car args) (apply-primitive prim (cdr args))))
           (mult () (* (car args) (apply-primitive prim (cdr args))))
           (div () (/ (car args) (apply-primitive prim (cdr args))))
@@ -367,8 +360,8 @@
           (less-eq ()  (string-length (car args)))
           (equal ()  (string-length (car args)))
           (different ()  (string-length (car args)))
-          (and1 ()  (string-length (car args)))
-          (or1 ()  (string-length (car args)))
+          (and ()  (string-length (car args)))
+          (or ()  (string-length (car args)))
           (in-range ()  (string-length (car args)))
           
           )
@@ -379,10 +372,13 @@
   )
 ;;Evaluate primitives for strings 
 (define applyString-primitive
-  (lambda (exp1 prim )
-    (cases primitiveString prim
-      (sizeString () (string-length exp1))
-      )
+  (lambda (exp1 prim args)
+    (if (null? (args))
+        (cases primitiveString prim
+          (sizeString () (+ (car args) (apply-primitive prim (cdr args))))
+          )
+        0
+        )
     )
   )
 ;;Evaluate primitives for Octs 
