@@ -40,7 +40,9 @@
 ;;             := (evalProc-exp) { <text> (<expression>) }
 ;;             := (evalProc-exp) { <text> ( (<expression> ,)* <expression>) }
 ;;             := (binary8) prim8 <expressionOct> <binaryOct> <expressionOct>;
+;; (expression := (unary8)un8 <expressionOct> <unaryOct> ;
 ;;             := (binary16) prim16 <expressionHex> <binaryHex> <expressionHex>;
+;;             := (unary16) un16 <expressionHex> <unaryHex> ;
 
 ;; <expressionHex> := (hex-number) (hex number)
 ;;                 := (hex-number) (hex (number ,)* number)
@@ -115,13 +117,10 @@
 (define grammar-syntatic-specification
   '(
     (program ( "/" exp-batch  "/") a-program)
-    
     (exp-batch ((arbno expression)) a-batch)
-    
     (expression (number) lit-number)
     (expression (expressionHex) expHex)
     (expression (expressionOct) expOct)
-    ;(expression (expressionString) stringExpression) ; revision
     (expression (text) lit-id)
     (expression ("\"" text "\"") lit-text)
     (expression ("true") true-val)
@@ -139,9 +138,9 @@
     (expression ("def" text "(" (separated-list text ",") ")" exp-batch "end") proc-exp)
     (expression ("{" text "(" (separated-list expression ",") ")" "}") evalProc-exp) ; revision
     (expression ("bin8" expressionOct binaryOct expressionOct ";") binary8)
-    (expression ("un8" expressionOct unaryOct ";") unary8) ;nuevo
+    (expression ("un8" expressionOct unaryOct ";") unary8) 
     (expression ("bin16" expressionHex binaryHex expressionHex ";") binary16)
-    (expression ("un16" expressionHex unaryHex ";") unary16) ;nuevo
+    (expression ("un16" expressionHex unaryHex ";") unary16) 
     
     (expressionHex ("(hex"  (separated-list number "," )  ")") hex-number )
     (expressionOct ( "(oct" (separated-list number ",") ")") oct-number )
@@ -164,21 +163,21 @@
     (binary-op ("||") or-op)
     (binary-op ("..") in-range)
 
-    (binaryOct ("+8+") sum8); revision
-    (binaryOct ("-8-") rest8); revision
-    (binaryOct ("*8*") mult8); revision
+    (binaryOct ("+8+") sum8)
+    (binaryOct ("-8-") rest8)
+    (binaryOct ("*8*") mult8)
     
-    (unaryOct ("++8++") plusOne8); revision
-    (unaryOct ("--8--") restOne8); revision
+    (unaryOct ("++8++") plusOne8)
+    (unaryOct ("--8--") restOne8)
 
-    (binaryHex ("+16+") sum16); revision
-    (binaryHex ("-16-") rest16); revision
-    (binaryHex ("*16*") mult16); revision
+    (binaryHex ("+16+") sum16)
+    (binaryHex ("-16-") rest16)
+    (binaryHex ("*16*") mult16)
     
-    (unaryHex ("++16++") plusOne16); revision
-    (unaryHex ("--16--") restOne16); revision
+    (unaryHex ("++16++") plusOne16)
+    (unaryHex ("--16--") restOne16)
 
-    (primitiveString (".length") sizeString) ; revision
+    (primitiveString (".length") sizeString) 
 
     (assign-op ("=") declarative-opp)
     (assign-op ("+=") add-eq)
@@ -251,23 +250,25 @@
 ;eval-exp-batch:
 (define (eval-batch batch env)
   (cases exp-batch batch
-    (a-batch (exps) 
-      (if (null? exps) (eopl:pretty-print '=>nil) (aux-print2 exps env))
+    (a-batch (exps)
+             (cases expression (car exps)
+                 (set-dec-exp (id assign body) (eval-expression (car exps) (extend-env
+                                                                             (listOfString->listOfSymbols (list id))
+                                                                             (list (eval-expression body env empty))
+                                                                             env) (cdr exps)))
+                 (else (if (null? exps) (eopl:pretty-print '=>nil) (aux-print exps env)))
+               )
+             
+      
     )
   )
 )
 
 (define aux-print
- (lambda (toPrint)
-   (map (lambda (x) (eopl:pretty-print x)) toPrint)
-   )
-  )
-
-(define aux-print2
  (lambda (toPrint env)
    (cond [(null? toPrint) "Succesfully executed"]
-         [#true (eopl:pretty-print (eval-expression (car toPrint) env))
-                (aux-print2 (cdr toPrint) env)])
+         [#true (eopl:pretty-print (eval-expression (car toPrint) env (cdr toPrint)))
+                (aux-print (cdr toPrint) env)])
    )
   )
 
@@ -275,7 +276,7 @@
 ; Purpose: Evaluate the expression using cases to determine which datatype is,
 ; it is used in eval-program. 
 (define eval-expression
-  (lambda (exp env)
+  (lambda (exp env exps)
     (cases expression exp
       (lit-number (number) number)
       (lit-id (id) (apply-env env (string->symbol id)))
@@ -286,26 +287,34 @@
       (expOct (octRepresentation) (evalOct octRepresentation))
       (expHex (hexRepresentation) (evalHex hexRepresentation))
       (set-dec-exp (id assign body)
-                   (applyAssigns-primitive (listOfString->listOfSymbols (list id)) assign (list (eval-expression body env)) env))
-      (unary-expression (unary-op body) unary-op)
-      (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) test-exp)
+                   ;(applyAssigns-primitive (listOfString->listOfSymbols (list id)) assign (list (eval-expression body env empty)) env exps)
+                   (cond
+                     [(not (null? exps)) (eval-batch (a-batch exps) env)]
+                                     
+                                   ;(extend-env-recursivelyBatchs  (listOfString->listOfSymbols (list id)) exps env) exps)]
+                     [else "No exps"]
+                     )
+                   
+                   )
+      (unary-expression (unary-op body) unary-op) ; falta
+      (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) test-exp) ;falta
       (print-expression (listExps)
                         (map 
                          (lambda (x) 
-                           (eopl:pretty-print (eval-expression x env))
+                           (eopl:pretty-print (eval-expression x env empty))
                            ) 
                          listExps)
-                        )
+                        ) ; falta revisar los voids
       (primitive-exp (exp1 op exp2)
-                     (let ((value1 (eval-expression exp1 env))
-                           (value2 (eval-expression exp2 env))
+                     (let ((value1 (eval-expression exp1 env empty))
+                           (value2 (eval-expression exp2 env empty))
                            )
                            (apply-primitive value1 value2 op))
                      )
-      (expPrimitiveString (exp op) (applyString-primitive (eval-expression exp env) op))
-      (for-exp (iterator numberRange1 numberRange2 body) iterator)
-      (proc-exp (id args body) id)
-      (evalProc-exp (id args) id)
+      (expPrimitiveString (exp op) (applyString-primitive (eval-expression exp env empty) op))
+      (for-exp (iterator numberRange1 numberRange2 body) iterator) ; falta
+      (proc-exp (id args body) id) ; falta 
+      (evalProc-exp (id args) id) ;falta
       (binary8 (exp1 op exp2) (cons "oct" (reverse (applyOct-binary (reverse (cdr (evalOct exp1))) (reverse (cdr (evalOct exp2))) op))))
       (binary16 (exp1 op exp2) (cons "hex" (reverse (applyHex-binary (reverse (cdr (evalHex exp1))) (reverse (cdr (evalHex exp2))) op))))
       (unary8 (exp1 op) (cons "oct" (reverse (applyOct-unary (reverse (cdr (evalOct exp1))) op))))
@@ -323,18 +332,6 @@
   (lambda (sintOct)
     (cases expressionOct sintOct
       (oct-number (list-numbers) (cons 'oct list-numbers)))))
-
-
-
-; auxiliary functions to apply eval-expression to each element of a
-; list of operands (expressions)
-(define eval-rands
-  (lambda (rands env)
-    (map (lambda (x) (eval-rand x env)) rands)))
-
-(define eval-rand
-  (lambda (rand env)
-    (eval-expression rand env)))
 
 ;Auxiliary functions to convert lists of strings to lists of symbols
 (define listOfString->listOfSymbols
@@ -484,12 +481,12 @@
 
 (define zero (lambda () '()))
 
-;/bin16(hex 10,11,12)*16*(hex 2,11,3);/
 ;;Evaluate primitives of assigns 
 (define applyAssigns-primitive
-  (lambda (id assign body env)
+  (lambda (id assign body env exps)
     (cases assign-op assign
-      (declarative-opp ()(extend-env-recursively id body env) )
+      (declarative-opp () 
+                       0)
       (add-eq ()0 )
       (diff-eq ()0 )
       (mult-eq ()0 )
@@ -526,6 +523,8 @@
       (a-ref (pos vec)
              (vector-set! vec pos val)))))
 
+
+
 ;*******************************************************************************************
 ;Datatypes
 
@@ -540,7 +539,7 @@
 (define-datatype procval procval?
   (closure
    (ids (list-of symbol?))
-   (body exp-batch?)
+   (body (exp-batch?))
    (env environment?)))
 
 ;apply-procedure: evalua el cuerpo de un procedimientos en el ambiente extendido correspondiente
@@ -553,6 +552,14 @@
     )
   )
 )
+;; Evalua el cuerpo de expresiones siguientes
+
+(define apply-procedureExps
+  (lambda (id body exps env)
+        (eval-expression (car exps) (extend-env id body env) (cdr exps))
+      )
+    )
+
 
 (define scheme-value? (lambda (v) #t))
 
@@ -580,6 +587,15 @@
             (lambda (pos ids body)
               (vector-set! vec pos (closure ids body env)))
             (iota len) idss bodies)
+          env)))))
+
+;; extend batch
+(define extend-env-recursivelyBatchs
+  (lambda ( id body old-env )
+    (let ((len (length id)))
+      (let ((vec (make-vector len)))
+        (let ((env (extended-env-record id vec old-env)))
+              (vector-set! vec 0 (closure id body env))
           env)))))
 
 ;Ambiente recursivo para un solo procedimiento
