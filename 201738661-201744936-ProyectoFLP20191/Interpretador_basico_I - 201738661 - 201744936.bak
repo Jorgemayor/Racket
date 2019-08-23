@@ -26,7 +26,7 @@
 ;;             := (expHex) <expressionHex>
 ;;             := (expOct) <expressionOct>
 ;;             := (set-dec-exp) $ <letters> <assign-op> <expression> ;
-;;             := (unary-expression) <unary-op> <expression> ;
+;;             := (unary-expression) <unary-operation> <expression> ;
 ;;             := (condicional-exp) if <expression> then <exp-batch>
 ;;                                  (elsif <expression> then <exp-batch>)*
 ;;                                   else <exp-batch> end
@@ -88,7 +88,7 @@
 ;;             := (div-eq) /=
 ;;             := (pow-eq) **=
 
-;;<unary-op>  := (not-op) not
+;;<unary-operation>  := (not-op) not
 ;;                   := (not-op) !
 
 
@@ -118,7 +118,6 @@
   '(
     (program ( "/" exp-batch  "/") a-program)
     (exp-batch ((arbno expression)) a-batch)
-    
     (expression (number) lit-number)
     (expression (expressionHex) expHex)
     (expression (expressionOct) expOct)
@@ -128,7 +127,7 @@
     (expression ("false") false-val)
     (expression ("nil") empty-val)
     (expression ("$" text assign-op expression ";") set-dec-exp)
-    (expression (unary-op expression ";") unary-expression)
+    (expression (unary-operation expression ";") unary-expression)
     (expression ("if" expression "then" exp-batch
                       (arbno "elsif" expression "then" exp-batch)
                       "else" exp-batch "end") condicional-exp)
@@ -187,8 +186,8 @@
     (assign-op ("/=") div-eq)
     (assign-op ("**=") pow-eq)
 
-    (unary-op ("not") not-op)
-    (unary-op ("!") not-op)
+    (unary-operation ("not") not-op)
+    (unary-operation ("!") not-op)
     
     )
   )
@@ -254,10 +253,10 @@
     (a-batch (exps)
              (cond [(null? exps) "Succesfully executed"]
                    [else (cases expression (car exps)
-                           (set-dec-exp (id assign body) (applyAssigns-primitive (listOfString->listOfSymbols (list id))
-                                                                                 assign
-                                                                                 (list (eval-expression body env empty))
-                                                                                 env exps))
+                           (set-dec-exp (id assign body)  (applyAssigns-primitive (listOfString->listOfSymbols (list id))
+                                                                                  assign
+                                                                                  (list (eval-expression body env empty))
+                                                                                  env exps) )
                             (else (aux-print exps env))
                             )]
                    )
@@ -287,17 +286,20 @@
       (expOct (octRepresentation) (evalOct octRepresentation))
       (expHex (hexRepresentation) (evalHex hexRepresentation))
       (set-dec-exp (id assign body) (eval-batch (a-batch exps) env))
-      (unary-expression (unary-op body) (apply-unary-exp unary-op (eval-expression body env empty)))
+      (unary-expression (unary-op body) unary-op) ; falta
       (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) test-exp) ;falta
       (print-expression (listExps)
                         (map 
                          (lambda (x) 
-                           (eopl:pretty-print (eval-expression x env empty))) listExps)) ; falta revisar los voids
+                           (eopl:pretty-print (eval-expression x env empty))
+                           ) 
+                         listExps)
+                        ) ; falta revisar los voids
       (primitive-exp (exp1 op exp2)
                      (let ((value1 (eval-expression exp1 env empty))
                            (value2 (eval-expression exp2 env empty))
                            )
-                       (apply-binary-exp value1 value2 op))
+                       (apply-primitive value1 value2 op))
                      ;(eval-batch (a-batch exps) env)
                      
                      )
@@ -334,12 +336,12 @@
     (cond [(null? ids) empty]
           [else (cons (listOfString->listOfSymbols (car ids)) (listOfListString->listOfListSymbols (cdr ids)))])))
 
-;apply-binary-exp: <primitiva> <list-of-expression> -> number || string
+;apply-primitive: <primitiva> <list-of-expression> -> number || string
 ;Purpose: Operates the list of expression(at least one expression acording to grammar)
 ; depending on what primitive is, which is identified with cases.
 ; This procedure is used in  eval-expression.
 
-(define apply-binary-exp
+(define apply-primitive
   (lambda (exp1 exp2 prim)
     (cases binary-op prim
       (sum () 
@@ -363,21 +365,6 @@
       (or-op ()  (or exp1 exp2))
       (in-range () (if (< exp1 exp2) (getInterval exp1 exp2) (reverse (getInterval exp2 exp1))))
       )
-    )
-  )
-
-(define apply-unary-exp
-  (lambda (prim exp)
-    (cases unary-op prim
-      (not-op () (not exp)))
-    )
-  )
-
-(define eval-condition
-  (lambda (elseiftest elseIfTrue false-exp env)
-    (cond [(null? elseiftest) (eval-batch (a-batch false-exp) env)]
-          [(eval-expression (car elseiftest)) (eval-batch (a-batch (car elseIfTrue)) env)]
-          [#true (eval-condition (cdr elseiftest) (cdr elseIfTrue) false-exp env)])
     )
   )
 
@@ -489,25 +476,15 @@
 ;;Evaluate primitives of assigns 
 (define applyAssigns-primitive
   (lambda (id assign body env exps)
-    (if (boolean? (apply-env env (car id)))
-        (cases assign-op assign
-          (declarative-opp () (eval-expression (car exps) (extend-env id body env)
-                                               (cdr exps)))
-          (add-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
-          (diff-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
-          (mult-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
-          (div-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
-          (pow-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
-          )
-        (cases assign-op assign
-          (declarative-opp () (apply-set-ref (car id) (car body) env exps))
-          (add-eq () (apply-set-ref (car id) (+ (apply-env env (car id)) (car body)) env exps))
-          (diff-eq () (apply-set-ref (car id) (- (apply-env env (car id)) (car body)) env exps))
-          (mult-eq () (apply-set-ref (car id) (* (apply-env env (car id)) (car body)) env exps))
-          (div-eq () (apply-set-ref (car id) (/ (apply-env env (car id)) (car body)) env exps))
-          (pow-eq () (apply-set-ref (car id) (expt (apply-env env (car id)) (car body)) env exps))
-          )
-        )
+    (cases assign-op assign
+      (declarative-opp () (eval-expression (car exps) (extend-env id body env)
+                                                        (cdr exps)))
+      (add-eq ()0 )
+      (diff-eq ()0 )
+      (mult-eq ()0 )
+      (div-eq ()0 )
+      (pow-eq ()0 )
+      )
     )
   )
 
@@ -634,36 +611,30 @@
 ;función que busca un símbolo en un ambiente
 (define apply-env
   (lambda (env sym)
-    (let ([result-ref (apply-env-ref env sym)])
-      (if (reference? result-ref)
-          (deref result-ref)
-          result-ref)
-      )
-    )
-  )
+    (deref (apply-env-ref env sym))))
 
 (define apply-env-ref
   (lambda (env sym)
     (cases environment env
-      (empty-env-record () #f)
+      (empty-env-record ()
+                        (eopl:error 'Error "undefined local variable or method ~s" sym))
       (extended-env-record (syms vals env)
-                           (let ((pos (list-find-position sym syms)))
+                           (let ((pos (rib-find-position sym syms)))
                              (if (number? pos)
                                  (a-ref pos vals)
                                  (apply-env-ref env sym)))))))
 
 ;apply-set-ref: asigna un valor a un id
 (define apply-set-ref
-  (lambda (id value env exps)
-    (let ([result-ref (apply-env-ref env id)])
-      (if (reference? result-ref)
-          (begin
-            (setref! result-ref value)
-            (eval-batch (a-batch (cdr exps)) env))
-          result-ref)
-      )
-    )
-  )
+  (lambda (id value env)
+    (setref! (apply-env-ref env id) value)))
+
+; funciones auxiliares para encontrar la posición de un símbolo
+; en la lista de símbolos de unambiente
+(define rib-find-position 
+  (lambda (sym los)
+    (list-find-position sym los)))
+
 
 ; Auxiliary functions
 
@@ -682,10 +653,7 @@
       (else (let ((list-index-r (list-index pred (cdr ls))))
               (if (number? list-index-r)
                   (+ list-index-r 1)
-                  #f)))
-      )
-    )
-  )
+                  #f))))))
 
 ;*******************************************************************************************
 
