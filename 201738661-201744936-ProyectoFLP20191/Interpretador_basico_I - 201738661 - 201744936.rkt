@@ -253,10 +253,10 @@
     (a-batch (exps)
              (cond [(null? exps) "Succesfully executed"]
                    [else (cases expression (car exps)
-                            (set-dec-exp (id assign body) (eval-expression (car exps) (extend-env
-                                                                                        (listOfString->listOfSymbols (list id))
-                                                                                        (list (eval-expression body env empty))
-                                                                                        env) (cdr exps)))
+                           (set-dec-exp (id assign body)  (applyAssigns-primitive (listOfString->listOfSymbols (list id))
+                                                                                  assign
+                                                                                  (list (eval-expression body env empty))
+                                                                                  env exps) )
                             (else (aux-print exps env))
                             )]
                    )
@@ -477,8 +477,8 @@
 (define applyAssigns-primitive
   (lambda (id assign body env exps)
     (cases assign-op assign
-      (declarative-opp () 
-                       0)
+      (declarative-opp () (eval-expression (car exps) (extend-env id body env)
+                                                        (cdr exps)))
       (add-eq ()0 )
       (diff-eq ()0 )
       (mult-eq ()0 )
