@@ -476,15 +476,25 @@
 ;;Evaluate primitives of assigns 
 (define applyAssigns-primitive
   (lambda (id assign body env exps)
-    (cases assign-op assign
-      (declarative-opp () (eval-expression (car exps) (extend-env id body env)
-                                                        (cdr exps)))
-      (add-eq ()0 )
-      (diff-eq ()0 )
-      (mult-eq ()0 )
-      (div-eq ()0 )
-      (pow-eq ()0 )
-      )
+    (if (boolean? (apply-env env (car id)))
+        (cases assign-op assign
+          (declarative-opp () (eval-expression (car exps) (extend-env id body env)
+                                               (cdr exps)))
+          (add-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
+          (diff-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
+          (mult-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
+          (div-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
+          (pow-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
+          )
+        (cases assign-op assign
+          (declarative-opp () (apply-set-ref (car id) (car body) env exps))
+          (add-eq () (apply-set-ref (car id) (+ (apply-env env (car id)) (car body)) env exps))
+          (diff-eq () (apply-set-ref (car id) (- (apply-env env (car id)) (car body)) env exps))
+          (mult-eq () (apply-set-ref (car id) (* (apply-env env (car id)) (car body)) env exps))
+          (div-eq () (apply-set-ref (car id) (/ (apply-env env (car id)) (car body)) env exps))
+          (pow-eq () (apply-set-ref (car id) (expt (apply-env env (car id)) (car body)) env exps))
+          )
+        )
     )
   )
 
@@ -611,30 +621,46 @@
 ;función que busca un símbolo en un ambiente
 (define apply-env
   (lambda (env sym)
-    (deref (apply-env-ref env sym))))
+    (let ([result-ref (apply-env-ref env sym)])
+      (if (reference? result-ref)
+          (deref result-ref)
+          result-ref)
+      )
+    )
+  )
+
+(define look-for
+  (lambda (env sym)
+    (cases environment env
+      (empty-env-record () #f)
+      (extended-env-record (syms vals env)
+                           (let ((pos (list-find-position sym syms)))
+                             (if (number? pos)
+                                 #t
+                                 pos))))))
 
 (define apply-env-ref
   (lambda (env sym)
     (cases environment env
-      (empty-env-record ()
-                        (eopl:error 'Error "undefined local variable or method ~s" sym))
+      (empty-env-record () #f)
       (extended-env-record (syms vals env)
-                           (let ((pos (rib-find-position sym syms)))
+                           (let ((pos (list-find-position sym syms)))
                              (if (number? pos)
                                  (a-ref pos vals)
                                  (apply-env-ref env sym)))))))
 
 ;apply-set-ref: asigna un valor a un id
 (define apply-set-ref
-  (lambda (id value env)
-    (setref! (apply-env-ref env id) value)))
-
-; funciones auxiliares para encontrar la posición de un símbolo
-; en la lista de símbolos de unambiente
-(define rib-find-position 
-  (lambda (sym los)
-    (list-find-position sym los)))
-
+  (lambda (id value env exps)
+    (let ([result-ref (apply-env-ref env id)])
+      (if (reference? result-ref)
+          (begin
+            (setref! result-ref value)
+            (eval-batch (a-batch (cdr exps)) env))
+          result-ref)
+      )
+    )
+  )
 
 ; Auxiliary functions
 
