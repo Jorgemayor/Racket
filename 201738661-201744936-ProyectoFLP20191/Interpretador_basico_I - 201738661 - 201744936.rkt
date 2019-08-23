@@ -131,11 +131,11 @@
     (expression (unary-op expression ";") unary-expression)
     (expression ("if" expression "then" "{" exp-batch "}"
                       (arbno "elsif" expression "then" "{" exp-batch "}")
-                      "else" "{" exp-batch "}" "end") condicional-exp)
+                      "else" "{" exp-batch "}" "end") condicional-exp) ;change in gramatic
     (expression ("puts" (separated-list expression ",") ";") print-expression)
     (expression ("(" expression binary-op expression ")") primitive-exp)
     (expression ("[" expression primitiveString "]") expPrimitiveString)
-    (expression ("for" text "in" number ".." number exp-batch "end") for-exp)
+    (expression ("for" text "in" number ".." number "{"exp-batch"}" "end") for-exp) ;change in gramatic
     (expression ("def" text "(" (separated-list text ",") ")" exp-batch "end") proc-exp)
     (expression ("{" text "(" (separated-list expression ",") ")" "}") evalProc-exp) ; revision
     (expression ("bin8" expressionOct binaryOct expressionOct ";") binary8)
@@ -265,6 +265,8 @@
     )
   )
 
+
+
 (define aux-print
   (lambda (toPrint env)
           (eopl:pretty-print (eval-expression (car toPrint) env (cdr toPrint)))
@@ -290,7 +292,7 @@
       (unary-expression (unary-op body) (apply-unary-exp unary-op (eval-expression body env empty)))
       (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) (if (eval-expression test-exp env empty)
                                                                                (eval-batch true-exp env)
-                                                                               (eval-condition elseiftest elseIfTrue false-exp env))) ;falta
+                                                                               (eval-condition elseiftest elseIfTrue false-exp env))) 
       (print-expression (listExps)
                         (map 
                          (lambda (x) 
@@ -300,11 +302,12 @@
                            (value2 (eval-expression exp2 env empty))
                            )
                        (apply-binary-exp value1 value2 op))
-                     ;(eval-batch (a-batch exps) env)
                      
                      )
       (expPrimitiveString (exp op) (applyString-primitive (eval-expression exp env empty) op))
-      (for-exp (iterator numberRange1 numberRange2 body) iterator) ; falta
+      (for-exp (iterator numberRange1 numberRange2 body) (if (< numberRange1 numberRange2) 
+                                                             (getInterval numberRange1 numberRange2) 
+                                                             (reverse (getInterval numberRange2 numberRange1)))) ; falta
       (proc-exp (id args body) id) ; falta 
       (evalProc-exp (id args) id) ;falta
       (binary8 (exp1 op exp2) (cons "oct" (reverse (applyOct-binary (reverse (cdr (evalOct exp1))) (reverse (cdr (evalOct exp2))) op))))
