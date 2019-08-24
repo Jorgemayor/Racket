@@ -294,9 +294,9 @@
                                                                                (eval-batch true-exp env)
                                                                                (eval-condition elseiftest elseIfTrue false-exp env))) 
       (print-expression (listExps)
-                        (map 
-                         (lambda (x) 
-                           (eopl:pretty-print (eval-expression x env empty))) listExps)) ; falta revisar los voids
+                         (for-each 
+                          (lambda (x) 
+                            (eopl:pretty-print(eval-expression x env empty))) listExps)); falta revisar los voids
       (primitive-exp (exp1 op exp2)
                      (let ((value1 (eval-expression exp1 env empty))
                            (value2 (eval-expression exp2 env empty))
@@ -305,9 +305,23 @@
                      
                      )
       (expPrimitiveString (exp op) (applyString-primitive (eval-expression exp env empty) op))
-      (for-exp (iterator numberRange1 numberRange2 body) (if (< numberRange1 numberRange2) 
-                                                             (getInterval numberRange1 numberRange2) 
-                                                             (reverse (getInterval numberRange2 numberRange1)))) ; falta
+      (for-exp (iterator numberRange1 numberRange2 body)
+               (let (
+                     (list-iterator
+                      (if (< numberRange1 numberRange2) 
+                          (getInterval numberRange1 numberRange2) 
+                          (reverse (getInterval numberRange2 numberRange1))))
+                     (env-let (extend-env (listOfString->listOfSymbols (list iterator)) (list 'nil) env)))
+                 (for-each
+                  (lambda (value)
+                    (begin
+                      (apply-set-refFor (string->symbol iterator) value env-let)
+                      (eval-batch body env-let)
+                      )
+                    )
+                  list-iterator
+                  )
+                 ))
       (proc-exp (id args body) id) ; falta 
       (evalProc-exp (id args) id) ;falta
       (binary8 (exp1 op exp2) (cons "oct" (reverse (applyOct-binary (reverse (cdr (evalOct exp1))) (reverse (cdr (evalOct exp2))) op))))
@@ -317,6 +331,17 @@
       )
     )
   )
+(define print-list
+  (lambda (list)
+    (cond
+      [(not(null? list))  (eopl:pretty-print (car list))
+                          (print-list (cdr list))])))
+;/
+;for i in 1..6 {
+;puts 2;
+;}
+;end
+;/
 ;PRUEBA DEL IF
 ; /
 ;$a=1;
@@ -695,7 +720,15 @@
       )
     )
   )
-
+(define apply-set-refFor
+  (lambda (id value env )
+    (let ([result-ref (apply-env-ref env id)])
+      (if (reference? result-ref)
+            (setref! result-ref value)
+          result-ref)
+      )
+    )
+  )
 ; Auxiliary functions
 
 ; auxiliary functions to find the position of a symbol
@@ -717,7 +750,5 @@
       )
     )
   )
-
-
 
 (interpreter)
