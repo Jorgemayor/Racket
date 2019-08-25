@@ -1,7 +1,7 @@
 #lang eopl
 ; Proyecto Fundamentos de lenguaje de programacion
 ; 
-; 201738661-201744936-ProyectoFLP
+; 201738661-201744936 - Interpretador Basico I
 ; 
 ; Developers:
 ; 
@@ -30,24 +30,19 @@
 ;;             := (condicional-exp) if <expression> then <exp-batch>
 ;;                                  (elsif <expression> then <exp-batch>)*
 ;;                                   else <exp-batch> end
-;;             := (print-expression) puts  <expression> ;
-;;             := (print-expression) puts  (<expression> ,)* <expresion> ;
+;;             := (print-expression) puts  <expression> {, <expression>}*;
 ;;             := (primitive-exp) (<expression> <binary-op> <expression>)
 ;;             := (expPrimitiveString) [<expression> <primitiveString>]
 ;;             := (for-exp) for <text> in <number> .. <number> <exp-batch> end
-;;             := (proc-exp) def <text> (<text>) <exp-batch> end
-;;             := (proc-exp) def <text> ( (<text> ,)* <text>) <exp-batch> end
-;;             := (evalProc-exp) { <text> (<expression>) }
-;;             := (evalProc-exp) { <text> ( (<expression> ,)* <expression>) }
+;;             := (proc-exp) def <text> (<text>) {, <text>}* <exp-batch> end
+;;             := (evalProc-exp) { <text> (<expression>) {, expression}* }
 ;;             := (binary8) prim8 <expressionOct> <binaryOct> <expressionOct>;
 ;; (expression := (unary8)un8 <expressionOct> <unaryOct> ;
 ;;             := (binary16) prim16 <expressionHex> <binaryHex> <expressionHex>;
 ;;             := (unary16) un16 <expressionHex> <unaryHex> ;
 
-;; <expressionHex> := (hex-number) (hex number)
-;;                 := (hex-number) (hex (number ,)* number)
-;; <expressionOct> := (oct-number) (oct number)
-;;                 := (oct-number) (oct (number ,)* number)
+;; <expressionHex> := (hex-number) (hex number {, number}*)
+;; <expressionOct> := (oct-number) (oct number {, number}*)
 
 ;;<binary-op> := (sum) +
 ;;            := (subd) -
@@ -89,7 +84,7 @@
 ;;             := (pow-eq) **=
 
 ;;<unary-op>  := (not-op) not
-;;                   := (not-op) !
+;;            := (not-op) !
 
 
 ;-------------------------------------------------------------------------------
@@ -235,7 +230,9 @@
   (lambda (pgm)
     (cases program pgm
       (a-program (body)
-                 (eval-batch body (init-env))))))
+                 (eval-batch body (init-env))))
+    )
+  )
 
 ; Initial Enviroment
 (define init-env
@@ -243,10 +240,7 @@
     (empty-env)))
 
 ;valor-verdad? determines whether a given value corresponds to a false or true Boolean value
-(define true-value?
-  (lambda (x)
-    #t))
-
+(define true-value? (lambda (x) #t))
 
 ;eval-exp-batch:
 (define (eval-batch batch env)
@@ -258,8 +252,8 @@
                                                                                  assign
                                                                                  (list (eval-expression body env empty))
                                                                                  env exps))
-                            (else (aux-print exps env))
-                            )]
+                           (else (aux-print exps env))
+                           )]
                    )
              )
     )
@@ -269,8 +263,8 @@
 
 (define aux-print
   (lambda (toPrint env)
-          (eopl:pretty-print (eval-expression (car toPrint) env (cdr toPrint)))
-          (eval-batch (a-batch (cdr toPrint)) env)
+    (eopl:pretty-print (eval-expression (car toPrint) env (cdr toPrint)))
+    (eval-batch (a-batch (cdr toPrint)) env)
     )
   )
 
@@ -294,15 +288,14 @@
                                                                                (eval-batch true-exp env)
                                                                                (eval-condition elseiftest elseIfTrue false-exp env))) 
       (print-expression (listExps)
-                         (for-each 
-                          (lambda (x) 
-                            (eopl:pretty-print(eval-expression x env empty))) listExps)); falta revisar los voids
+                        (for-each 
+                         (lambda (x) 
+                           (eopl:pretty-print(eval-expression x env empty))) listExps)); falta revisar los voids
       (primitive-exp (exp1 op exp2)
                      (let ((value1 (eval-expression exp1 env empty))
                            (value2 (eval-expression exp2 env empty))
                            )
                        (apply-binary-exp value1 value2 op))
-                     
                      )
       (expPrimitiveString (exp op) (applyString-primitive (eval-expression exp env empty) op))
       (for-exp (iterator numberRange1 numberRange2 body)
@@ -319,9 +312,9 @@
                       (eval-batch body env-let)
                       )
                     )
-                  list-iterator
-                  )
-                 ))
+                  list-iterator)
+                 )
+               )
       (proc-exp (id args body) id) ; falta 
       (evalProc-exp (id args) id) ;falta
       (binary8 (exp1 op exp2) (cons "oct" (reverse (applyOct-binary (reverse (cdr (evalOct exp1))) (reverse (cdr (evalOct exp2))) op))))
@@ -331,11 +324,15 @@
       )
     )
   )
+
 (define print-list
   (lambda (list)
     (cond
-      [(not(null? list))  (eopl:pretty-print (car list))
-                          (print-list (cdr list))])))
+      [(not(null? list)) (eopl:pretty-print (car list))
+                         (print-list (cdr list))])
+    )
+  )
+
 ;/
 ;for i in 1..6 {
 ;puts 2;
@@ -370,23 +367,31 @@
 (define evalHex
   (lambda (sintHex)
     (cases expressionHex sintHex
-      (hex-number (list-numbers) (cons 'hex list-numbers)))))
+      (hex-number (list-numbers) (cons 'hex list-numbers)))
+    )
+  )
 
 (define evalOct
   (lambda (sintOct)
     (cases expressionOct sintOct
-      (oct-number (list-numbers) (cons 'oct list-numbers)))))
+      (oct-number (list-numbers) (cons 'oct list-numbers)))
+    )
+  )
 
 ;Auxiliary functions to convert lists of strings to lists of symbols
 (define listOfString->listOfSymbols
   (lambda (ids)
     (cond [(null? ids) empty]
-          [else (cons (string->symbol (car ids)) (listOfString->listOfSymbols (cdr ids)))])))
+          [else (cons (string->symbol (car ids)) (listOfString->listOfSymbols (cdr ids)))])
+    )
+  )
 
 (define listOfListString->listOfListSymbols
   (lambda (ids)
     (cond [(null? ids) empty]
-          [else (cons (listOfString->listOfSymbols (car ids)) (listOfListString->listOfListSymbols (cdr ids)))])))
+          [else (cons (listOfString->listOfSymbols (car ids)) (listOfListString->listOfListSymbols (cdr ids)))])
+    )
+  )
 
 (define eval-condition
   (lambda (elseiftest elseIfTrue false-exp env)
@@ -496,22 +501,24 @@
     )
   )
 
-(define restOne (lambda (n base)
-                  (cond [(null? n) '()]
-                        [(and (= 0 (car n)) (null? (cdr n))) '()]
-                        [(and (null? (cdr n))(= 1 (car n))) '()]
-                        [(and (< (car n) base) (> (car n) 0 ))
-                         (cons (- (car n) 1) (cdr n))]
-                        [else (cons (- base 1) (restOne (cdr n) base))])
-                  )
+(define restOne
+  (lambda (n base)
+    (cond [(null? n) '()]
+          [(and (= 0 (car n)) (null? (cdr n))) '()]
+          [(and (null? (cdr n))(= 1 (car n))) '()]
+          [(and (< (car n) base) (> (car n) 0 ))
+           (cons (- (car n) 1) (cdr n))]
+          [else (cons (- base 1) (restOne (cdr n) base))])
+    )
   )
 
-(define plusOne (lambda (n base)
-                  (cond [(null? n) (list 1)]
-                        [(and (< (car n) (- base 1) ) (>= (car n) 0 ))
-                         (cons (+ 1 (car n)) (cdr n))]
-                        [else (cons 0 (plusOne (cdr n) base))])
-                  )
+(define plusOne
+  (lambda (n base)
+    (cond [(null? n) (list 1)]
+          [(and (< (car n) (- base 1) ) (>= (car n) 0 ))
+           (cons (+ 1 (car n)) (cdr n))]
+          [else (cons 0 (plusOne (cdr n) base))])
+    )
   )
 
 (define sumBase
@@ -547,14 +554,13 @@
   (lambda (id assign body env exps)
     (if (boolean? (apply-env env (car id)))
         (cases assign-op assign
-          (declarative-opp () (eval-expression (car exps) (extend-env id body env)
-                                               (cdr exps)))
+          (declarative-opp () (eval-expression (car exps) (extend-env id body env) (cdr exps)))
           (add-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
           (diff-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
           (mult-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
           (div-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
-          (pow-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
-          )
+          (pow-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id))))
+        
         (cases assign-op assign
           (declarative-opp () (apply-set-ref (car id) (car body) env exps))
           (add-eq () (apply-set-ref (car id) (+ (apply-env env (car id)) (car body)) env exps))
@@ -576,25 +582,31 @@
 
 (define deref
   (lambda (ref)
-    (primitive-deref ref)))
+    (primitive-deref ref)
+    )
+  )
 
 (define primitive-deref
   (lambda (ref)
     (cases reference ref
       (a-ref (pos vec)
-             (vector-ref vec pos)))))
+             (vector-ref vec pos)))
+    )
+  )
 
 (define setref!
   (lambda (ref val)
-    (primitive-setref! ref val)))
+    (primitive-setref! ref val)
+    )
+  )
 
 (define primitive-setref!
   (lambda (ref val)
     (cases reference ref
       (a-ref (pos vec)
-             (vector-set! vec pos val)))))
-
-
+             (vector-set! vec pos val)))
+    )
+  )
 
 ;*******************************************************************************************
 ;Datatypes
@@ -602,10 +614,9 @@
 ;definición del tipo de dato ambiente
 (define-datatype environment environment?
   (empty-env-record)
-  (extended-env-record
-   (syms (list-of symbol?))
-   (vec  vector?)
-   (env environment?)))
+  (extended-env-record (syms (list-of symbol?))
+                       (vec  vector?)
+                       (env environment?)))
 
 (define-datatype procval procval?
   (closure
@@ -618,11 +629,11 @@
   (lambda (proc args env)
     (cases procval proc
       (closure (ids body env)
-               (eval-expression body (extend-env ids args env))
-               )
+               (eval-expression body (extend-env ids args env)))
       )
     )
   )
+
 ;; Evalua el cuerpo de expresiones siguientes
 
 (define apply-procedureExps
@@ -631,7 +642,6 @@
     )
   )
 
-
 (define scheme-value? (lambda (v) #t))
 
 ;*******************************************************************************************
@@ -639,13 +649,15 @@
 
 (define empty-env  
   (lambda ()
-    (empty-env-record)))       
-
-
+    (empty-env-record)
+    )
+  )
 
 (define extend-env
   (lambda (syms vals env)
-    (extended-env-record syms (list->vector vals) env)))
+    (extended-env-record syms (list->vector vals) env)
+    )
+  )
 
 ;extend-env-recursively: <list-of symbols> <list-of <list-of symbols>> <list-of expressions> environment -> environment
 ;función que crea un ambiente extendido para procedimientos recursivos
@@ -658,23 +670,20 @@
            (lambda (pos ids body)
              (vector-set! vec pos (closure ids body env)))
            (iota len) idss bodies)
-          env)))))
-
-;; extend batch
-(define extend-env-recursivelyBatchs
-  (lambda ( id body old-env )
-    (let ((len (length id)))
-      (let ((vec (make-vector len)))
-        (let ((env (extended-env-record id vec old-env)))
-          (vector-set! vec 0 (closure id body env))
-          env)))))
+          env)
+        )
+      )
+    )
+  )
 
 ;Ambiente recursivo para un solo procedimiento
-(define (a-recursive-env a-proc-name ids body env)
-  (let ((vec (make-vector 1)))
-    (let ((env (extended-env-record (list a-proc-name) vec env)))
-      (vector-set! vec 0 (closure ids body env))
-      env
+(define a-recursive-env
+  (lambda (a-proc-name ids body env)
+    (let ((vec (make-vector 1)))
+      (let ((env (extended-env-record (list a-proc-name) vec env)))
+        (vector-set! vec 0 (closure ids body env))
+        env
+        )
       )
     )
   )
@@ -684,8 +693,12 @@
 (define iota
   (lambda (end)
     (let loop ((next 0))
-      (if (>= next end) '()
-          (cons next (loop (+ 1 next)))))))
+      (if (>= next end)
+          '()
+          (cons next (loop (+ 1 next))))
+      )
+    )
+  )
 
 ;función que busca un símbolo en un ambiente
 (define apply-env
@@ -706,7 +719,9 @@
                            (let ((pos (list-find-position sym syms)))
                              (if (number? pos)
                                  (a-ref pos vals)
-                                 (apply-env-ref env sym)))))))
+                                 (apply-env-ref env sym)))))
+    )
+  )
 
 ;apply-set-ref: asigna un valor a un id
 (define apply-set-ref
@@ -720,15 +735,17 @@
       )
     )
   )
+
 (define apply-set-refFor
   (lambda (id value env )
     (let ([result-ref (apply-env-ref env id)])
       (if (reference? result-ref)
-            (setref! result-ref value)
+          (setref! result-ref value)
           result-ref)
       )
     )
   )
+
 ; Auxiliary functions
 
 ; auxiliary functions to find the position of a symbol
@@ -736,7 +753,9 @@
 
 (define list-find-position
   (lambda (sym los)
-    (list-index (lambda (sym1) (eqv? sym1 sym)) los)))
+    (list-index (lambda (sym1) (eqv? sym1 sym)) los)
+    )
+  )
 
 (define list-index
   (lambda (pred ls)
