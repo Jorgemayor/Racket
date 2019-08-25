@@ -230,7 +230,7 @@
   (lambda (pgm)
     (cases program pgm
       (a-program (body)
-                 (eval-batch body (init-env) empty 0)))
+                 (eval-batch body (init-env))))
     )
   )
 
@@ -243,38 +243,30 @@
 (define true-value? (lambda (x) #t))
 
 ;eval-exp-batch:
-(define (eval-batch batch env outerExps numberOfInnerBatches)
+(define (eval-batch batch env)
   (cases exp-batch batch
     (a-batch (exps)
              (cond
-               [(null? exps) (if (eq? 0 numberOfInnerBatches) "Exit with code 0" (eval-batch (a-batch exps) env outerExps (- numberOfInnerBatches 1)))]
+               [(null? exps) "Exit with code=0"]
                [else (cases expression (car exps)
                        (set-dec-exp (id assign body) (applyAssigns-primitive (listOfString->listOfSymbols (list id))
                                                                              assign
-                                                                             (list (eval-expression body env empty outerExps numberOfInnerBatches))
-                                                                             env
-                                                                             exps
-                                                                             outerExps
-                                                                             numberOfInnerBatches))
-                       (proc-exp (id args body) (eval-expression (car exps)
-                                                                 (extend-env-recursively (list(string->symbol id))
-                                                                                         (listOfString->listOfSymbols args)
-                                                                                         body
-                                                                                         env)
-                                                                 (cdr exps)
-                                                                 outerExps
-                                                                 numberOfInnerBatches))
-                       (else (aux-print exps env outerExps numberOfInnerBatches))
+                                                                             (list (eval-expression body env empty))
+                                                                             env exps))
+                       (proc-exp (id args body) (eval-expression (car exps)  (extend-env-recursively (list(string->symbol id)) (listOfString->listOfSymbols args) body env) (cdr exps))
+                                 )
+                       (else (aux-print exps env))
                        )]
+                   
                )
              )
     )
   )
 
 (define aux-print
-  (lambda (toPrint env outerExps numberOfInnerBatches)
-    (eopl:pretty-print (eval-expression (car toPrint) env (cdr toPrint) outerExps numberOfInnerBatches))
-    (eval-batch (a-batch (cdr toPrint)) env outerExps numberOfInnerBatches)
+  (lambda (toPrint env)
+    (eopl:pretty-print (eval-expression (car toPrint) env (cdr toPrint)))
+    (eval-batch (a-batch (cdr toPrint)) env)
     )
   )
 
@@ -282,7 +274,7 @@
 ; Purpose: Evaluate the expression using cases to determine which datatype is,
 ; it is used in eval-program. 
 (define eval-expression
-  (lambda (exp env exps outerExps numberOfInnerBatches)
+  (lambda (exp env exps)
     (cases expression exp
       (lit-number (number) number)
       (lit-id (id) (apply-env env (string->symbol id)))
@@ -292,23 +284,23 @@
       (empty-val () (eopl:pretty-print '=>nil))
       (expOct (octRepresentation) (evalOct octRepresentation))
       (expHex (hexRepresentation) (evalHex hexRepresentation))
-      (set-dec-exp (id assign body) (eval-batch (a-batch exps) env outerExps numberOfInnerBatches))
-      (unary-expression (unary-op body) (apply-unary-exp unary-op (eval-expression body env outerExps numberOfInnerBatches)))
-      (condicional-exp (test-exp true-batch elseiftest elseIfTrue false-exp) (if (eval-expression test-exp env exps outerExps numberOfInnerBatches)
-                                                                                 (eval-batch true-batch env outerExps (+ numberOfInnerBatches 1))
-                                                                                 (eval-condition elseiftest elseIfTrue false-exp env outerExps numberOfInnerBatches))) 
+      (set-dec-exp (id assign body) (eval-batch (a-batch exps) env))
+      (unary-expression (unary-op body) (apply-unary-exp unary-op (eval-expression body env empty)))
+      (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) (if (eval-expression test-exp env empty)
+                                                                               (eval-batch true-exp env)
+                                                                               (eval-condition elseiftest elseIfTrue false-exp env))) 
       (print-expression (listExps)
-                        (for-each 
-                         (lambda (x) 
-                           (eopl:pretty-print(eval-expression x env empty outerExps numberOfInnerBatches))) listExps)); falta revisar los voids
+                         (for-each 
+                          (lambda (x) 
+                            (eopl:pretty-print(eval-expression x env empty))) listExps)); falta revisar los voids
       (primitive-exp (exp1 op exp2)
-                     (let ((value1 (eval-expression exp1 env empty outerExps numberOfInnerBatches))
-                           (value2 (eval-expression exp2 env empty outerExps numberOfInnerBatches))
+                     (let ((value1 (eval-expression exp1 env empty))
+                           (value2 (eval-expression exp2 env empty))
                            )
                        (apply-binary-exp value1 value2 op))
                      
                      )
-      (expPrimitiveString (exp op) (applyString-primitive (eval-expression exp env empty outerExps numberOfInnerBatches) op))
+      (expPrimitiveString (exp op) (applyString-primitive (eval-expression exp env empty) op))
       (for-exp (iterator numberRange1 numberRange2 body)
                (let (
                      (list-iterator
@@ -320,18 +312,20 @@
                   (lambda (value)
                     (begin
                       (apply-set-refFor (string->symbol iterator) value env-let)
-                      (eval-batch body env-let outerExps (+ numberOfInnerBatches 1))
+                      (eval-batch body env-let)
                       )
                     )
-                  list-iterator)
-                 )
-               )
-      (proc-exp (id args body) (eval-batch (a-batch exps) env outerExps numberOfInnerBatches))
+                  list-iterator
+                  )
+                 ))
+      (proc-exp (id args body) 
+                (eval-batch (a-batch exps) env)
+                )  
       (evalProc-exp (id args) 
-                    (let ([name (eval-expression id env exps outerExps numberOfInnerBatches)]
-                          [args (eval-rands args env exps outerExps numberOfInnerBatches)])
+                    (let ([name (eval-expression id env exps)]
+                          [args (eval-rands args env exps)])
                       (if (procval? name)
-                          (apply-procedure name args env outerExps numberOfInnerBatches)
+                          (apply-procedure name args env)
                           ("Attemp to apply non-procedure ~s" name))
                       )
                     )
@@ -339,7 +333,9 @@
       (binary16 (exp1 op exp2) (cons "hex" (reverse (applyHex-binary (reverse (cdr (evalHex exp1))) (reverse (cdr (evalHex exp2))) op))))
       (unary8 (exp1 op) (cons "oct" (reverse (applyOct-unary (reverse (cdr (evalOct exp1))) op))))
       (unary16 (exp1 op) (cons "hex" (reverse (applyHex-unary (reverse (cdr (evalHex exp1))) op))))
+      
       )
+    
     )
   )
 
@@ -381,10 +377,10 @@
   )
 
 (define eval-condition
-  (lambda (elseiftest elseIfTrue false-exp env outerExps numberOfInnerBatches)
-    (cond [(null? elseiftest) (eval-batch false-exp env outerExps (+ numberOfInnerBatches 1))]
-          [(eval-expression (car elseiftest) env empty outerExps numberOfInnerBatches) (eval-batch (car elseIfTrue) env outerExps (+ numberOfInnerBatches 1))]
-          [#true (eval-condition (cdr elseiftest) (cdr elseIfTrue) false-exp env outerExps numberOfInnerBatches)])
+  (lambda (elseiftest elseIfTrue false-exp env)
+    (cond [(null? elseiftest) (eval-batch false-exp env)]
+          [(eval-expression (car elseiftest) env empty) (eval-batch (car elseIfTrue) env)]
+          [#true (eval-condition (cdr elseiftest) (cdr elseIfTrue) false-exp env)])
     )
   )
 
@@ -399,8 +395,8 @@
 ; auxiliary functions to apply eval-expression to each element of a
 ; list of operands (expressions)
 (define eval-rands
-  (lambda (rands env exps outerExps numberOfInnerBatches)
-    (map (lambda (x) (eval-expression x env exps outerExps numberOfInnerBatches)) rands)
+  (lambda (rands env exps)
+    (map (lambda (x) (eval-expression x env exps)) rands)
     )
   )
 
@@ -545,10 +541,10 @@
 
 ;;Evaluate primitives of assigns 
 (define applyAssigns-primitive
-  (lambda (id assign body env exps outerExps numberOfInnerBatches)
+  (lambda (id assign body env exps)
     (if (boolean? (apply-env env (car id)))
         (cases assign-op assign
-          (declarative-opp () (eval-expression (car exps) (extend-env id body env) (cdr exps) outerExps numberOfInnerBatches))
+          (declarative-opp () (eval-expression (car exps) (extend-env id body env) (cdr exps)))
           (add-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
           (diff-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
           (mult-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
@@ -556,12 +552,12 @@
           (pow-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id))))
         
         (cases assign-op assign
-          (declarative-opp () (apply-set-ref (car id) (car body) env exps outerExps numberOfInnerBatches))
-          (add-eq () (apply-set-ref (car id) (+ (apply-env env (car id)) (car body)) env exps outerExps numberOfInnerBatches))
-          (diff-eq () (apply-set-ref (car id) (- (apply-env env (car id)) (car body)) env exps outerExps numberOfInnerBatches))
-          (mult-eq () (apply-set-ref (car id) (* (apply-env env (car id)) (car body)) env exps outerExps numberOfInnerBatches))
-          (div-eq () (apply-set-ref (car id) (/ (apply-env env (car id)) (car body)) env exps outerExps numberOfInnerBatches))
-          (pow-eq () (apply-set-ref (car id) (expt (apply-env env (car id)) (car body)) env exps outerExps numberOfInnerBatches))
+          (declarative-opp () (apply-set-ref (car id) (car body) env exps))
+          (add-eq () (apply-set-ref (car id) (+ (apply-env env (car id)) (car body)) env exps))
+          (diff-eq () (apply-set-ref (car id) (- (apply-env env (car id)) (car body)) env exps))
+          (mult-eq () (apply-set-ref (car id) (* (apply-env env (car id)) (car body)) env exps))
+          (div-eq () (apply-set-ref (car id) (/ (apply-env env (car id)) (car body)) env exps))
+          (pow-eq () (apply-set-ref (car id) (expt (apply-env env (car id)) (car body)) env exps))
           )
         )
     )
@@ -613,11 +609,11 @@
    (vec  vector?)
    (env environment?)
    )
-  (recursively-extended-env-record (proc-name (list-of symbol?))
-                                   (ids (list-of symbol?))
-                                   (body exp-batch?)
-                                   (env environment?))
-  )
+   (recursively-extended-env-record (proc-name (list-of symbol?))
+                                    (ids (list-of symbol?))
+                                    (body exp-batch?)
+                                    (env environment?))
+   )
 
 (define-datatype procval procval?
   (closure
@@ -627,13 +623,24 @@
 
 ;apply-procedure: evalua el cuerpo de un procedimientos en el ambiente extendido correspondiente
 (define apply-procedure
-  (lambda (proc args env outerExps numberOfInnerBatches)
+  (lambda (proc args env)
     (cases procval proc
       (closure (ids body env)
-               (eval-batch body (extend-env ids args env) outerExps (+ numberOfInnerBatches 1)))
+               (eval-batch body (extend-env ids args env ))
+               )
       )
     )
   )
+;; Evalua el cuerpo de expresiones siguientes
+
+(define apply-procedureExps
+  (lambda (id body exps env)
+    (eval-expression (car exps) (extend-env id body env) (cdr exps))
+    )
+  )
+
+
+(define scheme-value? (lambda (v) #t))
 
 ;*******************************************************************************************
 ;Ambientes
@@ -712,8 +719,8 @@
                                        (let ([pos (list-find-position sym proc-names)])
                                          (if (number? pos)
                                              (closure idss
-                                                      bodies
-                                                      env)
+                                                     bodies
+                                                       env)
                                              (apply-env-ref old-env sym))
                                          )
                                        )
@@ -723,12 +730,12 @@
 
 ;apply-set-ref: asigna un valor a un id
 (define apply-set-ref
-  (lambda (id value env exps outerExps numberOfInnerBatches)
+  (lambda (id value env exps)
     (let ([result-ref (apply-env-ref env id)])
       (if (reference? result-ref)
           (begin
             (setref! result-ref value)
-            (eval-batch (a-batch (cdr exps)) env outerExps numberOfInnerBatches))
+            (eval-batch (a-batch (cdr exps)) env))
           result-ref)
       )
     )
