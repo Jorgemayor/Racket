@@ -230,7 +230,8 @@
   (lambda (pgm)
     (cases program pgm
       (a-program (body)
-                 (eval-batch body (init-env))))
+                 (eval-batch body (init-env)))
+      )
     )
   )
 
@@ -247,17 +248,32 @@
   (cases exp-batch batch
     (a-batch (exps)
              (cond
-               [(null? exps) "Exit with code=0"]
+               [(null? exps) "Exit with code 0"]
                [else (cases expression (car exps)
                        (set-dec-exp (id assign body) (applyAssigns-primitive (listOfString->listOfSymbols (list id))
                                                                              assign
                                                                              (list (eval-expression body env empty))
                                                                              env exps))
-                       (proc-exp (id args body) (eval-expression (car exps)  (extend-env-recursively (list(string->symbol id)) (listOfString->listOfSymbols args) body env) (cdr exps))
-                                 )
+                       (proc-exp (id args body) (eval-expression (car exps)
+                                                                 (extend-env-recursively (list(string->symbol id))
+                                                                                         (listOfString->listOfSymbols args)
+                                                                                         body
+                                                                                         env)
+                                                                 (cdr exps)))
+                       (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) (if (eval-expression test-exp env empty)
+                                                                                                (eval-batch true-exp env )
+                                                                                                (eval-condition elseiftest elseIfTrue false-exp env)
+                                                                                                ))
+                       (evalProc-exp (id args) 
+                                     (let ([name (eval-expression id env exps)]
+                                           [args (eval-rands args env exps)])
+                                       (if (procval? name)
+                                           (apply-procedure name args env)
+                                           ("Attemp to apply non-procedure ~s" name))
+                                       )
+                                     )
                        (else (aux-print exps env))
                        )]
-                   
                )
              )
     )
@@ -286,19 +302,16 @@
       (expHex (hexRepresentation) (evalHex hexRepresentation))
       (set-dec-exp (id assign body) (eval-batch (a-batch exps) env))
       (unary-expression (unary-op body) (apply-unary-exp unary-op (eval-expression body env empty)))
-      (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) (if (eval-expression test-exp env empty)
-                                                                               (eval-batch true-exp env)
-                                                                               (eval-condition elseiftest elseIfTrue false-exp env))) 
+      (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) (eval-batch (a-batch exps) env))
       (print-expression (listExps)
-                         (for-each 
-                          (lambda (x) 
-                            (eopl:pretty-print(eval-expression x env empty))) listExps)); falta revisar los voids
+                        (for-each 
+                         (lambda (x) 
+                           (eopl:pretty-print(eval-expression x env empty))) listExps)); falta revisar los voids
       (primitive-exp (exp1 op exp2)
                      (let ((value1 (eval-expression exp1 env empty))
                            (value2 (eval-expression exp2 env empty))
                            )
                        (apply-binary-exp value1 value2 op))
-                     
                      )
       (expPrimitiveString (exp op) (applyString-primitive (eval-expression exp env empty) op))
       (for-exp (iterator numberRange1 numberRange2 body)
@@ -315,27 +328,16 @@
                       (eval-batch body env-let)
                       )
                     )
-                  list-iterator
-                  )
-                 ))
-      (proc-exp (id args body) 
-                (eval-batch (a-batch exps) env)
-                )  
-      (evalProc-exp (id args) 
-                    (let ([name (eval-expression id env exps)]
-                          [args (eval-rands args env exps)])
-                      (if (procval? name)
-                          (apply-procedure name args env)
-                          ("Attemp to apply non-procedure ~s" name))
-                      )
-                    )
+                  list-iterator)
+                 )
+               )
+      (proc-exp (id args body) (eval-batch (a-batch exps) env))
+      (evalProc-exp (id args) (eval-batch (a-batch exps) env))
       (binary8 (exp1 op exp2) (cons "oct" (reverse (applyOct-binary (reverse (cdr (evalOct exp1))) (reverse (cdr (evalOct exp2))) op))))
       (binary16 (exp1 op exp2) (cons "hex" (reverse (applyHex-binary (reverse (cdr (evalHex exp1))) (reverse (cdr (evalHex exp2))) op))))
       (unary8 (exp1 op) (cons "oct" (reverse (applyOct-unary (reverse (cdr (evalOct exp1))) op))))
       (unary16 (exp1 op) (cons "hex" (reverse (applyHex-unary (reverse (cdr (evalHex exp1))) op))))
-      
       )
-    
     )
   )
 
@@ -609,11 +611,11 @@
    (vec  vector?)
    (env environment?)
    )
-   (recursively-extended-env-record (proc-name (list-of symbol?))
-                                    (ids (list-of symbol?))
-                                    (body exp-batch?)
-                                    (env environment?))
-   )
+  (recursively-extended-env-record (proc-name (list-of symbol?))
+                                   (ids (list-of symbol?))
+                                   (body exp-batch?)
+                                   (env environment?))
+  )
 
 (define-datatype procval procval?
   (closure
@@ -719,8 +721,8 @@
                                        (let ([pos (list-find-position sym proc-names)])
                                          (if (number? pos)
                                              (closure idss
-                                                     bodies
-                                                       env)
+                                                      bodies
+                                                      env)
                                              (apply-env-ref old-env sym))
                                          )
                                        )
