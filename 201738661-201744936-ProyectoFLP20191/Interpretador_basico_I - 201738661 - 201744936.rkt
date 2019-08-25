@@ -331,12 +331,11 @@
                 )  
       (evalProc-exp (id args) 
                     (let ([name (eval-expression id env exps)]
-                                     [args (eval-rands args env exps)])
-                                (if (procval? name)
-                                    (apply-procedure name (car args) env)
-                                 ("Attemp to apply non-procedure ~s" name))
-                               
-                                 )
+                          [args (eval-rands args env exps)])
+                      (if (procval? name)
+                          (apply-procedure name args env)
+                          ("Attemp to apply non-procedure ~s" name))
+                      )
                     )
       (binary8 (exp1 op exp2) (cons "oct" (reverse (applyOct-binary (reverse (cdr (evalOct exp1))) (reverse (cdr (evalOct exp2))) op))))
       (binary16 (exp1 op exp2) (cons "hex" (reverse (applyHex-binary (reverse (cdr (evalHex exp1))) (reverse (cdr (evalHex exp2))) op))))
@@ -671,8 +670,7 @@
   (lambda (proc args env)
     (cases procval proc
       (closure (ids body env)
-               ;(apply-env  (car ids))
-               (eval-batch body (extend-env ids (list args) env ))
+               (eval-batch body (extend-env ids args env ))
                )
       )
     )
@@ -701,8 +699,7 @@
   (lambda (syms vals env)
     (extended-env-record syms (list->vector vals) env)))
 
-;extend-env-recursively: <list-of symbols> <list-of <list-of symbols>> <list-of expressions> environment -> environment
-;función que crea un ambiente extendido para procedimientos recursivos
+
 (define a-recursive-env
   (lambda (proc-names idss bodies old-env)
     (let ((len (length proc-names)))
@@ -714,7 +711,8 @@
            (iota len) idss bodies)
           env)))))
 
-;Ambiente recursivo para un solo procedimiento
+;extend-env-recursively: <list-of symbols> <list-of <list-of symbols>> <list-of expressions> environment -> environment
+;función que crea un ambiente extendido para procedimientos recursivos
 (define (extend-env-recursively a-proc-name ids body env)
   (let ((vec (make-vector 1)))
     (let ((env (recursively-extended-env-record a-proc-name ids body env)))
@@ -755,7 +753,7 @@
       (recursively-extended-env-record (proc-names idss bodies old-env)
                                        (let ([pos (list-find-position sym proc-names)])
                                          (if (number? pos)
-                                             (closure (list (list-ref idss pos))
+                                             (closure idss
                                                      bodies
                                                        env)
                                              (apply-env-ref old-env sym))
