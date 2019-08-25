@@ -326,7 +326,7 @@
                   list-iterator
                   )
                  ))
-      (proc-exp (id args body) 
+      (proc-exp (id args body) ;(closure (listOfString->listOfSymbols (list id))  body env)
                 (eval-batch (a-batch exps) env)
                 )  
       (evalProc-exp (id args) 
