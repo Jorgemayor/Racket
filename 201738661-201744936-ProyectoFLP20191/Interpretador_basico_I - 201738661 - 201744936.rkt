@@ -252,17 +252,19 @@
 (define (eval-batch batch env)
   (cases exp-batch batch
     (a-batch (exps)
-             (cond [(null? exps) "Succesfully executed"]
-                   [else (cases expression (car exps)
-                           (set-dec-exp (id assign body) (applyAssigns-primitive (listOfString->listOfSymbols (list id))
-                                                                                 assign
-                                                                                 (list (eval-expression body env empty))
-                                                                                 env exps))
-                           (proc-exp (id args body) (eval-expression (car exps)  (extend-env-recursively (list(string->symbol id)) (listOfString->listOfSymbols args) body env) (cdr exps))
-                                     )
-                           (else (aux-print exps env))
-                            )]
-                   )
+             (cond
+               [(null? exps) "Exit with code=0"]
+               [else (cases expression (car exps)
+                       (set-dec-exp (id assign body) (applyAssigns-primitive (listOfString->listOfSymbols (list id))
+                                                                             assign
+                                                                             (list (eval-expression body env empty))
+                                                                             env exps))
+                       (proc-exp (id args body) (eval-expression (car exps)  (extend-env-recursively (list(string->symbol id)) (listOfString->listOfSymbols args) body env) (cdr exps))
+                                 )
+                       (else (aux-print exps env))
+                       )]
+                   
+               )
              )
     )
   )
@@ -361,9 +363,27 @@
       [(not(null? list))  (eopl:pretty-print (car list))
                           (print-list (cdr list))])))
 
-
-
-;Prueba definiciones
+;Prueba definiciones alcance de variables
+;/
+;$b=3;
+;
+;def sum (a)
+;{
+;if (a==8) then
+;{
+;$b=0; b
+;}
+;else
+;{
+;b
+;}
+;end
+;}
+;end
+;{sum (8)}
+;
+;/
+;Prueba definiciones simple
 ; /
 ;def sum (a)
 ;{
