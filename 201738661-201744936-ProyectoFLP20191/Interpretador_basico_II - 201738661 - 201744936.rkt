@@ -1,7 +1,7 @@
 #lang eopl
 ; Proyecto Fundamentos de lenguaje de programacion
 ; 
-; 201738661-201744936-ProyectoFLP
+; 201738661-201744936 - Interpretador Basico II
 ; 
 ; Developers:
 ; 
@@ -252,7 +252,7 @@
 (define (eval-batch batch env)
   (cases exp-batch batch
     (a-batch (exps)
-             (cond [(null? exps) "Succesfully executed"]
+             (cond [(null? exps) "Exit with code=0"]
                    [else (cases expression (car exps)
                            (set-dec-exp (id assign body) (applyAssigns-primitive (listOfString->listOfSymbols (list id))
                                                                                  assign

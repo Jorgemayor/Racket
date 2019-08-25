@@ -1,4 +1,4 @@
-#lang eopl
+﻿#lang eopl
 ; Proyecto Fundamentos de lenguaje de programacion
 ; 
 ; 201738661-201744936 - Interpretador Basico I
@@ -131,8 +131,8 @@
     (expression ("(" expression binary-op expression ")") primitive-exp)
     (expression ("[" expression primitiveString "]") expPrimitiveString)
     (expression ("for" text "in" number ".." number "{"exp-batch"}" "end") for-exp) ;change in gramatic
-    (expression ("def" text "(" (separated-list text ",") ")" exp-batch "end") proc-exp)
-    (expression ("{" text "(" (separated-list expression ",") ")" "}") evalProc-exp) ; revision
+    (expression ("def" text "(" (separated-list text ",") ")" "{"exp-batch"}" "end") proc-exp)
+    (expression ("{" expression "(" (separated-list expression ",") ")" "}") evalProc-exp) ; revision
     (expression ("bin8" expressionOct binaryOct expressionOct ";") binary8)
     (expression ("un8" expressionOct unaryOct ";") unary8) 
     (expression ("bin16" expressionHex binaryHex expressionHex ";") binary16)
@@ -246,20 +246,22 @@
 (define (eval-batch batch env)
   (cases exp-batch batch
     (a-batch (exps)
-             (cond [(null? exps) "Succesfully executed"]
-                   [else (cases expression (car exps)
-                           (set-dec-exp (id assign body) (applyAssigns-primitive (listOfString->listOfSymbols (list id))
-                                                                                 assign
-                                                                                 (list (eval-expression body env empty))
-                                                                                 env exps))
-                           (else (aux-print exps env))
-                           )]
-                   )
+             (cond
+               [(null? exps) "Exit with code=0"]
+               [else (cases expression (car exps)
+                       (set-dec-exp (id assign body) (applyAssigns-primitive (listOfString->listOfSymbols (list id))
+                                                                             assign
+                                                                             (list (eval-expression body env empty))
+                                                                             env exps))
+                       (proc-exp (id args body) (eval-expression (car exps)  (extend-env-recursively (list(string->symbol id)) (listOfString->listOfSymbols args) body env) (cdr exps))
+                                 )
+                       (else (aux-print exps env))
+                       )]
+                   
+               )
              )
     )
   )
-
-
 
 (define aux-print
   (lambda (toPrint env)
@@ -288,14 +290,15 @@
                                                                                (eval-batch true-exp env)
                                                                                (eval-condition elseiftest elseIfTrue false-exp env))) 
       (print-expression (listExps)
-                        (for-each 
-                         (lambda (x) 
-                           (eopl:pretty-print(eval-expression x env empty))) listExps)); falta revisar los voids
+                         (for-each 
+                          (lambda (x) 
+                            (eopl:pretty-print(eval-expression x env empty))) listExps)); falta revisar los voids
       (primitive-exp (exp1 op exp2)
                      (let ((value1 (eval-expression exp1 env empty))
                            (value2 (eval-expression exp2 env empty))
                            )
                        (apply-binary-exp value1 value2 op))
+                     
                      )
       (expPrimitiveString (exp op) (applyString-primitive (eval-expression exp env empty) op))
       (for-exp (iterator numberRange1 numberRange2 body)
@@ -304,7 +307,7 @@
                       (if (< numberRange1 numberRange2) 
                           (getInterval numberRange1 numberRange2) 
                           (reverse (getInterval numberRange2 numberRange1))))
-                     (env-let (extend-env (listOfString->listOfSymbols (list iterator)) (list 'nil) env)))
+                     (env-let (extend-env (listOfString->listOfSymbols (list iterator)) (list empty) env)))
                  (for-each
                   (lambda (value)
                     (begin
@@ -312,16 +315,27 @@
                       (eval-batch body env-let)
                       )
                     )
-                  list-iterator)
-                 )
-               )
-      (proc-exp (id args body) id) ; falta 
-      (evalProc-exp (id args) id) ;falta
+                  list-iterator
+                  )
+                 ))
+      (proc-exp (id args body) 
+                (eval-batch (a-batch exps) env)
+                )  
+      (evalProc-exp (id args) 
+                    (let ([name (eval-expression id env exps)]
+                          [args (eval-rands args env exps)])
+                      (if (procval? name)
+                          (apply-procedure name args env)
+                          ("Attemp to apply non-procedure ~s" name))
+                      )
+                    )
       (binary8 (exp1 op exp2) (cons "oct" (reverse (applyOct-binary (reverse (cdr (evalOct exp1))) (reverse (cdr (evalOct exp2))) op))))
       (binary16 (exp1 op exp2) (cons "hex" (reverse (applyHex-binary (reverse (cdr (evalHex exp1))) (reverse (cdr (evalHex exp2))) op))))
       (unary8 (exp1 op) (cons "oct" (reverse (applyOct-unary (reverse (cdr (evalOct exp1))) op))))
       (unary16 (exp1 op) (cons "hex" (reverse (applyHex-unary (reverse (cdr (evalHex exp1))) op))))
+      
       )
+    
     )
   )
 
@@ -333,6 +347,44 @@
     )
   )
 
+;Prueba definiciones alcance de variables
+;/
+;$b=3;
+;
+;def sum (a)
+;{
+;if (a==8) then
+;{
+;$b=0; b
+;}
+;else
+;{
+;b
+;}
+;end
+;}
+;end
+;{sum (8)}
+;
+;/
+;Prueba definiciones simple
+; /
+;def sum (a)
+;{
+;if (a==8) then
+;{
+;"Es8"
+;}
+;else
+;{
+;{sum ((a+ 1))}
+;}
+;end
+;}
+;end
+;{sum (6)}
+;/
+;PRUEBA FOR
 ;/
 ;for i in 1..6 {
 ;puts 2;
@@ -409,6 +461,11 @@
     )
   )
 
+; auxiliary functions to apply eval-expression to each element of a
+; list of operands (expressions)
+(define eval-rands
+  (lambda (rands env exps)
+    (map (lambda (x) (eval-expression x env exps)) rands)))
 
 ;apply-binary-exp: <primitiva> <list-of-expression> -> number || string
 ;Purpose: Operates the list of expression(at least one expression acording to grammar)
@@ -614,9 +671,16 @@
 ;definición del tipo de dato ambiente
 (define-datatype environment environment?
   (empty-env-record)
-  (extended-env-record (syms (list-of symbol?))
-                       (vec  vector?)
-                       (env environment?)))
+  (extended-env-record
+   (syms (list-of symbol?))
+   (vec  vector?)
+   (env environment?)
+   )
+   (recursively-extended-env-record (proc-name (list-of symbol?))
+                                    (ids (list-of symbol?))
+                                    (body exp-batch?)
+                                    (env environment?))
+   )
 
 (define-datatype procval procval?
   (closure
@@ -629,11 +693,11 @@
   (lambda (proc args env)
     (cases procval proc
       (closure (ids body env)
-               (eval-expression body (extend-env ids args env)))
+               (eval-batch body (extend-env ids args env ))
+               )
       )
     )
   )
-
 ;; Evalua el cuerpo de expresiones siguientes
 
 (define apply-procedureExps
@@ -641,6 +705,7 @@
     (eval-expression (car exps) (extend-env id body env) (cdr exps))
     )
   )
+
 
 (define scheme-value? (lambda (v) #t))
 
@@ -661,7 +726,16 @@
 
 ;extend-env-recursively: <list-of symbols> <list-of <list-of symbols>> <list-of expressions> environment -> environment
 ;función que crea un ambiente extendido para procedimientos recursivos
-(define extend-env-recursively
+(define (extend-env-recursively a-proc-name ids body env)
+  (let ((vec (make-vector 1)))
+    (let ((env (recursively-extended-env-record a-proc-name ids body env)))
+      (vector-set! vec 0 (closure ids body env))
+      env
+      )
+    )
+  )
+
+(define a-recursive-env
   (lambda (proc-names idss bodies old-env)
     (let ((len (length proc-names)))
       (let ((vec (make-vector len)))
@@ -670,23 +744,7 @@
            (lambda (pos ids body)
              (vector-set! vec pos (closure ids body env)))
            (iota len) idss bodies)
-          env)
-        )
-      )
-    )
-  )
-
-;Ambiente recursivo para un solo procedimiento
-(define a-recursive-env
-  (lambda (a-proc-name ids body env)
-    (let ((vec (make-vector 1)))
-      (let ((env (extended-env-record (list a-proc-name) vec env)))
-        (vector-set! vec 0 (closure ids body env))
-        env
-        )
-      )
-    )
-  )
+          env)))))
 
 ;iota: number -> list
 ;función que retorna una lista de los números desde 0 hasta end
@@ -719,9 +777,15 @@
                            (let ((pos (list-find-position sym syms)))
                              (if (number? pos)
                                  (a-ref pos vals)
-                                 (apply-env-ref env sym)))))
-    )
-  )
+                                 (apply-env-ref env sym))))
+      (recursively-extended-env-record (proc-names idss bodies old-env)
+                                       (let ([pos (list-find-position sym proc-names)])
+                                         (if (number? pos)
+                                             (closure idss
+                                                     bodies
+                                                       env)
+                                             (apply-env-ref old-env sym))
+                                         )))))
 
 ;apply-set-ref: asigna un valor a un id
 (define apply-set-ref
