@@ -252,7 +252,7 @@
 (define (eval-batch batch env)
   (cases exp-batch batch
     (a-batch (exps)
-             (cond [(null? (cdr exps)) (eval-expression (car exps) env (cdr exps))]
+             (cond [(null? exps) "Exit with code=0"]
                    [else (cases expression (car exps)
                            (set-dec-exp (id assign body) (applyAssigns-primitive (listOfString->listOfSymbols (list id))
                                                                                  assign
