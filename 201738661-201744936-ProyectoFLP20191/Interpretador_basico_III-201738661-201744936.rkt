@@ -27,14 +27,14 @@
 ;;             := (expOct) <expressionOct>
 ;;             := (set-dec-exp) $ <letters> <assign-op> <expression> ;
 ;;             := (unary-expression) <unary-op> <expression> ;
-;;             := (condicional-exp) if <expression> then <exp-batch>
-;;                                  (elsif <expression> then <exp-batch>)*
-;;                                   else <exp-batch> end
+;;             := (condicional-exp) if <expression> then { <exp-batch> }
+;;                                  (elsif <expression> then { <exp-batch> })*
+;;                                   else { <exp-batch> } end
 ;;             := (print-expression) puts  <expression> {, <expression>}*;
 ;;             := (primitive-exp) (<expression> <binary-op> <expression>)
 ;;             := (expPrimitiveString) [<expression> <primitiveString>]
-;;             := (for-exp) for <text> in <number> .. <number> <exp-batch> end
-;;             := (proc-exp) def <text> (<text>) {, <text>}* <exp-batch> end
+;;             := (for-exp) for <text> in <expression> .. <expression> { <exp-batch> } end
+;;             := (proc-exp) def <text> (<text>) {, <text>}* { <exp-batch> } end
 ;;             := (evalProc-exp) { <text> (<expression>) {, expression}* }
 ;;             := (binary8) prim8 <expressionOct> <binaryOct> <expressionOct>;
 ;; (expression := (unary8)un8 <expressionOct> <unaryOct> ;
@@ -130,7 +130,7 @@
     (expression ("puts" (separated-list expression ",") ";") print-expression)
     (expression ("(" expression binary-op expression ")") primitive-exp)
     (expression ("[" expression primitiveString "]") expPrimitiveString)
-    (expression ("for" text "in" number ".." number "{"exp-batch"}" "end") for-exp) ;change in gramatic
+    (expression ("for" text "in" expression ".." expression "{"exp-batch"}" "end") for-exp) ;change in gramatic
     (expression ("def" text "(" (separated-list text ",") ")" "{"exp-batch"}" "end") proc-exp)
     (expression ("{" expression "(" (separated-list expression ",") ")" "}") evalProc-exp) ; revision
     (expression ("bin8" expressionOct binaryOct expressionOct ";") binary8)
@@ -314,8 +314,9 @@
                        (apply-binary-exp value1 value2 op))
                      )
       (expPrimitiveString (exp op) (applyString-primitive (eval-expression exp env empty) op))
-      (for-exp (iterator numberRange1 numberRange2 body)
-               (let (
+      (for-exp (iterator exp-ran-1 exp-ran-2 body)
+               (letrec ((numberRange1 (eval-expression exp-ran-1 env exps))
+                        (numberRange2 (eval-expression exp-ran-2 env exps))
                      (list-iterator
                       (if (< numberRange1 numberRange2) 
                           (getInterval numberRange1 numberRange2) 
