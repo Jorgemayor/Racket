@@ -27,14 +27,14 @@
 ;;             := (expOct) <expressionOct>
 ;;             := (set-dec-exp) $ <letters> <assign-op> <expression> ;
 ;;             := (unary-expression) <unary-op> <expression> ;
-;;             := (condicional-exp) if <expression> then { <exp-batch> }
-;;                                  (elsif <expression> then { <exp-batch> })*
-;;                                   else { <exp-batch> } end
+;;             := (condicional-exp) if <expression> then <exp-batch>
+;;                                  (elsif <expression> then <exp-batch>)*
+;;                                   else <exp-batch> end
 ;;             := (print-expression) puts  <expression> {, <expression>}*;
 ;;             := (primitive-exp) (<expression> <binary-op> <expression>)
 ;;             := (expPrimitiveString) [<expression> <primitiveString>]
-;;             := (for-exp) for <text> in <expression> .. <expression> { <exp-batch> } end
-;;             := (proc-exp) def <text> (<text>) {, <text>}* { <exp-batch> } end
+;;             := (for-exp) for <text> in <number> .. <number> <exp-batch> end
+;;             := (proc-exp) def <text> (<text>) {, <text>}* <exp-batch> end
 ;;             := (evalProc-exp) { <text> (<expression>) {, expression}* }
 ;;             := (binary8) prim8 <expressionOct> <binaryOct> <expressionOct>;
 ;; (expression := (unary8)un8 <expressionOct> <unaryOct> ;
@@ -115,8 +115,8 @@
     (exp-batch ((arbno expression)) a-batch)
     
     (expression (number) lit-number)
-    ;(expression (expressionHex) expHex); change gramatic
-    ;(expression (expressionOct) expOct); change gramatic
+    (expression (expressionHex) expHex)
+    (expression (expressionOct) expOct)
     (expression (text) lit-id)
     (expression ("\"" text "\"") lit-text)
     (expression ("true") true-val)
@@ -130,16 +130,16 @@
     (expression ("puts" (separated-list expression ",") ";") print-expression)
     (expression ("(" expression binary-op expression ")") primitive-exp)
     (expression ("[" expression primitiveString "]") expPrimitiveString)
-    (expression ("for" text "in" expression ".." expression "{"exp-batch"}" "end") for-exp) ;change in gramatic
+    (expression ("for" text "in" number ".." number "{"exp-batch"}" "end") for-exp) ;change in gramatic
     (expression ("def" text "(" (separated-list text ",") ")" "{"exp-batch"}" "end") proc-exp)
     (expression ("{" expression "(" (separated-list expression ",") ")" "}") evalProc-exp) ; revision
-    (expression ("bin8" expression binaryOct expression ";") binary8) ; change gramatic
-    (expression ("un8" expression unaryOct ";") unary8) ; change gramatic
-    (expression ("bin16" expression binaryHex expression ";") binary16) ; change gramatic
-    (expression ("un16" expression unaryHex ";") unary16)  ; change gramatic
+    (expression ("bin8" expressionOct binaryOct expressionOct ";") binary8)
+    (expression ("un8" expressionOct unaryOct ";") unary8) 
+    (expression ("bin16" expressionHex binaryHex expressionHex ";") binary16)
+    (expression ("un16" expressionHex unaryHex ";") unary16) 
     
-    (expression ("(hex"  (separated-list number "," )  ")") hex-number ) ; change gramatic
-    (expression ( "(oct" (separated-list number ",") ")") oct-number ) ; change gramatic
+    (expressionHex ("(hex"  (separated-list number "," )  ")") hex-number )
+    (expressionOct ( "(oct" (separated-list number ",") ")") oct-number )
     
     (binary-op ("+") sum)
     (binary-op ("-") subd)
@@ -298,8 +298,8 @@
       (true-val () #t)
       (false-val () #f)
       (empty-val () (eopl:pretty-print '=>nil))
-      (hex-number (hexRepresentation) (cons 'hex hexRepresentation) )
-      (oct-number (octRepresentation) (cons 'oct octRepresentation))
+      (expOct (octRepresentation) (evalOct octRepresentation))
+      (expHex (hexRepresentation) (evalHex hexRepresentation))
       (set-dec-exp (id assign body) (eval-batch (a-batch exps) env))
       (unary-expression (unary-op body) (apply-unary-exp unary-op (eval-expression body env empty)))
       (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) (eval-batch (a-batch exps) env))
@@ -314,9 +314,8 @@
                        (apply-binary-exp value1 value2 op))
                      )
       (expPrimitiveString (exp op) (applyString-primitive (eval-expression exp env empty) op))
-      (for-exp (iterator exp-ran-1 exp-ran-2 body)
-               (letrec ((numberRange1 (eval-expression exp-ran-1 env exps))
-                        (numberRange2 (eval-expression exp-ran-2 env exps))
+      (for-exp (iterator numberRange1 numberRange2 body)
+               (let (
                      (list-iterator
                       (if (< numberRange1 numberRange2) 
                           (getInterval numberRange1 numberRange2) 
@@ -334,10 +333,10 @@
                )
       (proc-exp (id args body) (eval-batch (a-batch exps) env))
       (evalProc-exp (id args) (eval-batch (a-batch exps) env))
-      (binary8 (exp1 op exp2) (cons "oct" (reverse (applyOct-binary (reverse (cdr (eval-expression exp1 env exps))) (reverse (cdr (eval-expression exp2 env exps))) op))))
-      (binary16 (exp1 op exp2) (cons "hex" (reverse (applyHex-binary (reverse (cdr (eval-expression exp1 env exps))) (reverse (cdr (eval-expression exp2 env exps))) op))))
-      (unary8 (exp1 op) (cons "oct" (reverse (applyOct-unary (reverse (cdr (eval-expression exp1 env exps))) op))))
-      (unary16 (exp1 op) (cons "hex" (reverse (applyHex-unary (reverse (cdr (eval-expression exp1 env exps))) op))))
+      (binary8 (exp1 op exp2) (cons "oct" (reverse (applyOct-binary (reverse (cdr (evalOct exp1))) (reverse (cdr (evalOct exp2))) op))))
+      (binary16 (exp1 op exp2) (cons "hex" (reverse (applyHex-binary (reverse (cdr (evalHex exp1))) (reverse (cdr (evalHex exp2))) op))))
+      (unary8 (exp1 op) (cons "oct" (reverse (applyOct-unary (reverse (cdr (evalOct exp1))) op))))
+      (unary16 (exp1 op) (cons "hex" (reverse (applyHex-unary (reverse (cdr (evalHex exp1))) op))))
       )
     )
   )
@@ -350,9 +349,19 @@
     )
   )
 
+(define evalHex
+  (lambda (sintHex)
+    (cases expressionHex sintHex
+      (hex-number (list-numbers) (cons 'hex list-numbers)))
+    )
+  )
 
-
-
+(define evalOct
+  (lambda (sintOct)
+    (cases expressionOct sintOct
+      (oct-number (list-numbers) (cons 'oct list-numbers)))
+    )
+  )
 
 ;Auxiliary functions to convert lists of strings to lists of symbols
 (define listOfString->listOfSymbols
@@ -844,4 +853,3 @@
 ;end
 ;a
 ;/
-

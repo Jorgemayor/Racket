@@ -27,14 +27,14 @@
 ;;             := (expOct) <expressionOct>
 ;;             := (set-dec-exp) $ <letters> <assign-op> <expression> ;
 ;;             := (unary-expression) <unary-op> <expression> ;
-;;             := (condicional-exp) if <expression> then <exp-batch>
-;;                                  (elsif <expression> then <exp-batch>)*
-;;                                   else <exp-batch> end
+;;             := (condicional-exp) if <expression> then { <exp-batch> }
+;;                                  (elsif <expression> then { <exp-batch> })*
+;;                                   else { <exp-batch> } end
 ;;             := (print-expression) puts  <expression> {, <expression>}*;
 ;;             := (primitive-exp) (<expression> <binary-op> <expression>)
 ;;             := (expPrimitiveString) [<expression> <primitiveString>]
-;;             := (for-exp) for <text> in <number> .. <number> <exp-batch> end
-;;             := (proc-exp) def <text> (<text>) {, <text>}* <exp-batch> end
+;;             := (for-exp) for <text> in <expression> .. <expression> { <exp-batch> } end
+;;             := (proc-exp) def <text> (<text>) {, <text>}* { <exp-batch> } end
 ;;             := (evalProc-exp) { <text> (<expression>) {, expression}* }
 ;;             := (binary8) prim8 <expressionOct> <binaryOct> <expressionOct>;
 ;; (expression := (unary8)un8 <expressionOct> <unaryOct> ;
@@ -115,8 +115,6 @@
     (exp-batch ((arbno expression)) a-batch)
     
     (expression (number) lit-number)
-    (expression (expressionHex) expHex)
-    (expression (expressionOct) expOct)
     (expression (text) lit-id)
     (expression ("\"" text "\"") lit-text)
     (expression ("true") true-val)
@@ -130,16 +128,17 @@
     (expression ("puts" (separated-list expression ",") ";") print-expression)
     (expression ("(" expression binary-op expression ")") primitive-exp)
     (expression ("[" expression primitiveString "]") expPrimitiveString)
-    (expression ("for" text "in" number ".." number "{"exp-batch"}" "end") for-exp) ;change in gramatic
-    (expression ("def" text "(" (separated-list text ",") ")" "{"exp-batch"}" "end") proc-exp)
+    (expression ("for" text "in" expression ".." expression "{"exp-batch"}" "end") for-exp) ;change in gramatic
+    (expression ("def" text "(" (separated-list type-exp text ",") ")" "{"exp-batch"}" "end") proc-exp) ;new
     (expression ("{" expression "(" (separated-list expression ",") ")" "}") evalProc-exp) ; revision
-    (expression ("bin8" expressionOct binaryOct expressionOct ";") binary8)
-    (expression ("un8" expressionOct unaryOct ";") unary8) 
-    (expression ("bin16" expressionHex binaryHex expressionHex ";") binary16)
-    (expression ("un16" expressionHex unaryHex ";") unary16) 
+    (expression ("bin8" expression binaryOct expression ";") binary8) ; change gramatic
+    (expression ("un8" expression unaryOct ";") unary8) ; change gramatic
+    (expression ("bin16" expression binaryHex expression ";") binary16) ; change gramatic
+    (expression ("un16" expression unaryHex ";") unary16)  ; change gramatic
     
-    (expressionHex ("(hex"  (separated-list number "," )  ")") hex-number )
-    (expressionOct ( "(oct" (separated-list number ",") ")") oct-number )
+    (expression ("(hex"  (separated-list number "," )  ")") hex-number ) ; change gramatic
+    (expression ( "(oct" (separated-list number ",") ")") oct-number ) ; change gramatic
+    
     
     (binary-op ("+") sum)
     (binary-op ("-") subd)
@@ -184,6 +183,16 @@
 
     (unary-op ("not") not-op)
     (unary-op ("!") not-op)
+
+ ;--------------------Types---------------------
+    (type-exp ("int") int-type-exp) ;new
+    (type-exp ("bool") bool-type-exp) ;new
+    (type-exp ("(" (separated-list type-exp "*") "->" type-exp ")")
+              proc-type-exp) ;new
+    (type-exp ("oct") oct-type-exp)
+    (type-exp ("hex") hex-type-exp)
+    (type-exp ("string") string-type-exp)
+    (type-exp ("empty") empty-type-exp)
     
     )
   )
@@ -220,6 +229,35 @@
                          scanner-lexical-specification
                          grammar-syntatic-specification)))
 
+
+
+;El Interpretador + checker (FrontEnd + Evaluación + señal para lectura )
+
+(define interpreter-types
+  (sllgen:make-rep-loop  "--> "
+    (lambda (pgm) (aux-interpreter  pgm)) 
+    (sllgen:make-stream-parser 
+      scanner-lexical-specification
+      grammar-syntatic-specification)))
+
+(define aux-interpreter
+  (lambda (x)
+    ;(type-of-program x)
+    (if (all-true? (map verify-types (type-of-program x))) (eval-program  x) 'error)
+    )
+  )
+
+; Function that helps put together a list of Booleans to verify types
+(define verify-types
+  (lambda (list-types)
+    (type? list-types)))
+
+;auxiliary that verifies if the list consists only of true values
+(define all-true?
+  (lambda (list-of-boolean)
+    (cond [(null? list-of-boolean) #t]
+          [else (and (car list-of-boolean) (all-true? (cdr list-of-boolean)))])))
+
 ;********************************************************************************)(***********
 
 ;*******************************************************************************************
@@ -254,7 +292,7 @@
                                                                              assign
                                                                              (list (eval-expression body env empty))
                                                                              env exps))
-                       (proc-exp (id args body) (eval-expression (car exps)
+                       (proc-exp (types id args body) (eval-expression (car exps)
                                                                  (extend-env-recursively (list(string->symbol id))
                                                                                          (listOfString->listOfSymbols args)
                                                                                          body
@@ -298,8 +336,8 @@
       (true-val () #t)
       (false-val () #f)
       (empty-val () (eopl:pretty-print '=>nil))
-      (expOct (octRepresentation) (evalOct octRepresentation))
-      (expHex (hexRepresentation) (evalHex hexRepresentation))
+      (hex-number (hexRepresentation) (cons 'hex hexRepresentation) )
+      (oct-number (octRepresentation) (cons 'oct octRepresentation))
       (set-dec-exp (id assign body) (eval-batch (a-batch exps) env))
       (unary-expression (unary-op body) (apply-unary-exp unary-op (eval-expression body env empty)))
       (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) (eval-batch (a-batch exps) env))
@@ -314,8 +352,9 @@
                        (apply-binary-exp value1 value2 op))
                      )
       (expPrimitiveString (exp op) (applyString-primitive (eval-expression exp env empty) op))
-      (for-exp (iterator numberRange1 numberRange2 body)
-               (let (
+      (for-exp (iterator exp-ran-1 exp-ran-2 body)
+               (letrec ((numberRange1 (eval-expression exp-ran-1 env exps))
+                        (numberRange2 (eval-expression exp-ran-2 env exps))
                      (list-iterator
                       (if (< numberRange1 numberRange2) 
                           (getInterval numberRange1 numberRange2) 
@@ -331,12 +370,12 @@
                   list-iterator)
                  )
                )
-      (proc-exp (id args body) (eval-batch (a-batch exps) env))
+      (proc-exp (id types args body) (eval-batch (a-batch exps) env))
       (evalProc-exp (id args) (eval-batch (a-batch exps) env))
-      (binary8 (exp1 op exp2) (cons "oct" (reverse (applyOct-binary (reverse (cdr (evalOct exp1))) (reverse (cdr (evalOct exp2))) op))))
-      (binary16 (exp1 op exp2) (cons "hex" (reverse (applyHex-binary (reverse (cdr (evalHex exp1))) (reverse (cdr (evalHex exp2))) op))))
-      (unary8 (exp1 op) (cons "oct" (reverse (applyOct-unary (reverse (cdr (evalOct exp1))) op))))
-      (unary16 (exp1 op) (cons "hex" (reverse (applyHex-unary (reverse (cdr (evalHex exp1))) op))))
+      (binary8 (exp1 op exp2) (cons "oct" (reverse (applyOct-binary (reverse (cdr (eval-expression exp1 env exps))) (reverse (cdr (eval-expression exp2 env exps))) op))))
+      (binary16 (exp1 op exp2) (cons "hex" (reverse (applyHex-binary (reverse (cdr (eval-expression exp1 env exps))) (reverse (cdr (eval-expression exp2 env exps))) op))))
+      (unary8 (exp1 op) (cons "oct" (reverse (applyOct-unary (reverse (cdr (eval-expression exp1 env exps))) op))))
+      (unary16 (exp1 op) (cons "hex" (reverse (applyHex-unary (reverse (cdr (eval-expression exp1 env exps))) op))))
       )
     )
   )
@@ -349,19 +388,9 @@
     )
   )
 
-(define evalHex
-  (lambda (sintHex)
-    (cases expressionHex sintHex
-      (hex-number (list-numbers) (cons 'hex list-numbers)))
-    )
-  )
 
-(define evalOct
-  (lambda (sintOct)
-    (cases expressionOct sintOct
-      (oct-number (list-numbers) (cons 'oct list-numbers)))
-    )
-  )
+
+
 
 ;Auxiliary functions to convert lists of strings to lists of symbols
 (define listOfString->listOfSymbols
@@ -437,9 +466,9 @@
 (define apply-unary-exp
   (lambda (prim exp)
     (cases unary-op prim
-      (not-op () (not exp)))
+      (not-op () (not exp))
     )
-  )
+  ))
 
 
 ;;Evaluate primitives for strings 
@@ -777,7 +806,381 @@
     )
   )
 
-(interpreter)
+
+;***********************************************************************************************************************
+;******************************************************  TypeS *****************************************************
+;***********************************************************************************************************************
+;***********************************************************************************************************************
+;********************************************  Ambientes de tipos  *****************************************************
+;***********************************************************************************************************************
+
+(define-datatype type-environment type-environment?
+  (empty-tenv-record)
+  (extended-tenv-record
+    (syms (list-of symbol?))
+    (vals (list-of type?))
+    (tenv type-environment?)))
+
+(define empty-tenv empty-tenv-record)
+(define extend-tenv extended-tenv-record)
+
+(define apply-tenv 
+  (lambda (tenv sym)
+    (cases type-environment tenv
+      (empty-tenv-record ()
+        (eopl:error 'apply-tenv "Unbound variable ~s" sym))
+      (extended-tenv-record (syms vals env)
+        (let ((pos (list-find-position sym syms)))
+          (if (number? pos)
+            (list-ref vals pos)
+            (apply-tenv env sym)))))))
+
+;***********************************************************************************************************************
+;***********************************************************************************************************************
+
+;***********************************************************************************************************************
+;*************************************************   Type Checker     **************************************************
+;***********************************************************************************************************************
+
+;type-of-program: <programa> -> type
+; función que chequea el tipo de un programa teniendo en cuenta un ambiente dado (se inicializa dentro del programa)
+(define type-of-program
+  (lambda (pgm)
+    (cases program pgm
+      (a-program (body) (eval-batch-types body (empty-tenv))))))
+
+
+(define (eval-batch-types batch env)
+  (cases exp-batch batch
+    (a-batch (exps)
+             (begin
+               (map
+                (lambda (exps)
+                  (type-of-expression exps env)
+                  ) exps))
+;                       (set-dec-exp (id assign body) 0)
+;                       (proc-exp (types id args body) 0)
+;                       (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) 0)
+;                       (evalProc-exp (id args) 
+;                                     0
+;                                     )
+                       
+                       
+               
+             )
+    ))
+  
+
+(define eval-types-batch
+  (lambda (exps env)
+    (type-of-expression exps env)
+    )
+  )
+
+;***********************************************************************************************************************
+;*************************************************  Datatypes for types    **************************************************
+;***********************************************************************************************************************
+
+(define-datatype type type?
+  (atomic-type
+   (name symbol?))
+  (proc-type
+   (arg-types (list-of type?))
+   (result-type type?)))
+
+(define int-type (atomic-type 'int))
+(define bool-type (atomic-type 'bool))
+(define oct-type (atomic-type 'oct))
+(define hex-type (atomic-type 'hex))
+(define string-type (atomic-type 'string))
+(define empty-type (atomic-type 'empty))
+
+
+
+(define expand-type-expression
+  (lambda (texp)
+    (cases type-exp texp
+      (int-type-exp () int-type)
+      (bool-type-exp () bool-type)
+      (proc-type-exp (arg-texps resut-texp)
+                     (proc-type 
+                                (expand-type-expressions arg-texps)
+                                (expand-type-expression resut-texp)))
+      (oct-type-exp () oct-type)
+      (hex-type-exp () hex-type)
+      (string-type-exp () string-type)
+      (empty-type-exp () empty-type)
+      )))
+
+(define expand-type-expressions
+  (lambda (texps)
+    (map expand-type-expression texps)))
+
+
+(define type-of-expression
+  (lambda (exp tenv)
+    (cases expression exp
+      (lit-text (text) string-type)
+      (lit-number (number) int-type)
+      (true-val () bool-type)
+      (false-val () bool-type)
+      (lit-id (id) (apply-tenv tenv id))
+      (empty-val () 0)
+      (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp)
+                       (let
+                           ((test-type (type-of-expression test-exp tenv))
+                            (false-type (type-of-expression false-exp tenv))
+                            (true-type (type-of-expression true-exp tenv))
+                            (elsif-test-type (type-of-expression elseiftest tenv))
+                            (elsif-true-type (type-of-expression elseIfTrue tenv))
+                            )
+                         (check-equal-type! test-type bool-type test-exp)
+                         (check-equal-type! true-type false-type exp)
+                         (check-equal-type! elsif-test-type bool-type elseiftest)
+                         (check-equal-type! elsif-true-type exp)
+                         true-type)
+                       )
+      (proc-exp (id texps args body) (type-of-proc-exp texps args body tenv)
+                )
+      (oct-number (octRepresentation) oct-type)
+      (hex-number (hexRepresentation) hex-type)
+      (set-dec-exp (id assign body) 0)
+      (unary-expression (unary-op body) 0)
+      
+      (print-expression (listExps)
+                        0); falta revisar los voids
+      (primitive-exp (exp1 op exp2)
+                     (type-of-application
+                      (type-of-Binaryprimitive op)
+                      (types-of-expressions (list exp1 exp2) tenv)
+                      op
+                      (list exp1 exp2)
+                      exp
+                      )
+                     )
+      (expPrimitiveString (expString op)
+                          (type-of-application
+                           (applyString-primitiveType op)
+                           (types-of-expressions (list expString) tenv)
+                           op
+                           (list expString)
+                           exp
+                           )
+                          )
+      (for-exp (iterator exp-ran-1 exp-ran-2 body)
+               0
+               )
+      
+      (evalProc-exp (id args)
+                    (type-of-application
+                     (type-of-expression id tenv)
+                     (types-of-expressions args tenv)
+                     id
+                     args
+                     exp
+                     ))
+      (binary8 (exp1 op exp2)
+               (type-of-application
+                      (applyOct-binaryType op)
+                      (types-of-expressions (list exp1 exp2) tenv)
+                      op
+                      (list exp1 exp2)
+                      exp
+                      ))
+      (binary16 (exp1 op exp2)
+                (type-of-application
+                      (applyHex-binaryType op)
+                      (types-of-expressions (list exp1 exp2) tenv)
+                      op
+                      (list exp1 exp2)
+                      exp
+                      ))
+      (unary8 (exp1 op)
+              (type-of-application
+               (applyOct-unaryType op)
+               (types-of-expressions (list exp1) tenv)
+               op
+               (list exp1)
+               exp
+               ))
+      (unary16 (exp1 op)
+               (type-of-application
+                (applyHex-unaryType op)
+                (types-of-expressions (list exp1) tenv)
+                op
+                (list exp1)
+                exp
+                ))
+      )
+    ))
+
+;check-equal-type!: <type> <type> <expression> -> 
+; verifica si dos tipos son iguales, muestra un mensaje de error en caso de que no lo sean
+(define check-equal-type!
+  (lambda (t1 t2 exp)
+    (if (not (equal? t1 t2))
+        (eopl:error 'check-equal-type!
+                    "Types didn’t match: ~s != ~s in~%~s"
+                    (type-to-external-form t1)
+                    (type-to-external-form t2)
+                    exp)
+        #t)))
+
+;type-to-external-form: <type> -> lista o simbolo
+; recibe un tipo y devuelve una representación del tipo facil de leer
+(define type-to-external-form
+  (lambda (ty)
+    (cases type ty
+      (atomic-type (name) name)
+      (proc-type (arg-types result-type)
+                 (append
+                  (arg-types-to-external-form arg-types)
+                  '(->)
+                  (list (type-to-external-form result-type)))))))
+
+(define arg-types-to-external-form
+  (lambda (types)
+    (if (null? types)
+        '()
+        (if (null? (cdr types))
+            (list (type-to-external-form (car types)))
+            (cons
+             (type-to-external-form (car types))
+             (cons '*
+                   (arg-types-to-external-form (cdr types))))))))
+  
+
+
+
+;type-of-proc-exp: (list-of <type-exp>) (list-of <symbol>) <expression> <tenv> -> <type>
+; función auxiliar para determinar el tipo de una expresión de creación de procedimiento
+(define type-of-proc-exp
+  (lambda (texps ids body tenv)
+    (let ((arg-types (expand-type-expressions texps)))
+      (let ((result-type
+             (type-of-expression body
+                                 (extend-tenv ids arg-types tenv))))
+        (proc-type arg-types result-type)))))
+
+;type-of-application: <type> (list-of <type>) <symbol> (list-of <symbol>) <expresion> -> <type>
+; función auxiliar para determinar el tipo de una expresión de aplicación
+(define type-of-application
+  (lambda (rator-type rand-types rator rands exp)
+    (cases type rator-type
+      (proc-type (arg-types result-type)
+                 (if (= (length arg-types) (length rand-types))
+                     (begin
+                       (for-each
+                        check-equal-type!
+                        rand-types arg-types rands)
+                       result-type)
+                     (eopl:error 'type-of-expression
+                                 (string-append
+                                  "Wrong number of arguments in expression ~s:"
+                                  "~%expected ~s~%got ~s")
+                                 exp
+                                 (map type-to-external-form arg-types)
+                                 (map type-to-external-form rand-types))))
+      (else
+       (eopl:error 'type-of-expression
+                   "Rator not a proc type:~%~s~%had rator type ~s"
+                   rator (type-to-external-form rator-type))))))
+
+
+
+;types-of-expressions: (list-of <type-exp>) <tenv> -> (list-of <type>)
+; función que mapea la función type-of-expresion a una lista
+(define types-of-expressions
+  (lambda (rands tenv)
+    (map (lambda (exp) (type-of-expression exp tenv)) rands)))
+
+;type-of-primitive: <primitive> -> <type>
+; función auxiliar para determinar el tipo de una primitiva
+(define type-of-Binaryprimitive
+  (lambda (prim)
+    (cases binary-op prim
+      (sum () (or
+               (proc-type (list int-type int-type) int-type)
+               (proc-type (list string-type string-type) string-type))
+           )
+      (subd () (proc-type (list int-type int-type) int-type))
+      (mult () (proc-type (list int-type int-type) int-type))
+      (div () (proc-type (list int-type int-type) int-type))
+      (mod-op () (proc-type (list int-type int-type) int-type))
+      (pow ()  (proc-type (list int-type int-type) int-type))
+      (higher ()  (proc-type (list int-type int-type) bool-type))
+      (higher-eq () (proc-type (list int-type int-type) bool-type))
+      (less ()  (proc-type (list int-type int-type) bool-type))
+      (less-eq () (proc-type (list int-type int-type) bool-type))
+      (equal ()  (proc-type (list int-type int-type) bool-type))
+      (different () (proc-type (list int-type int-type) bool-type))
+      (and-op ()  (proc-type (list bool-type bool-type) bool-type))
+      (or-op ()  (proc-type (list bool-type bool-type) bool-type))
+      (in-range () (proc-type (list int-type int-type) int-type))
+      )))
+  
+(define type-of-Unaryprimitive
+  (lambda (prim)
+    (cases unary-op prim
+      (not-op () (proc-type (list bool-type) bool-type)))))
+  
+  
+
+  ;;Evaluate primitives for strings 
+(define applyString-primitiveType
+  (lambda (prim)
+    (cases primitiveString prim
+      (sizeString () (proc-type (list string-type) int-type))
+      )
+    )
+  )
+
+;;Evaluate unary primitives for Hex
+(define applyHex-unaryType
+  (lambda (prim)
+    (cases unaryHex prim
+      (plusOne16 () (proc-type (list hex-type) hex-type))
+      (restOne16 () (proc-type (list hex-type) hex-type))
+      )
+    )
+  )
+
+;;Evaluate binary primitives for Hex
+(define applyHex-binaryType
+  (lambda ( prim)
+    (cases binaryHex prim
+      (sum16 () (proc-type (list hex-type hex-type) hex-type))
+      (rest16 () (proc-type (list hex-type hex-type) hex-type))
+      (mult16 () (proc-type (list hex-type hex-type) hex-type))
+      )
+    )
+  )
+
+;;Evaluate unary primitives for Hex
+(define applyOct-unaryType
+  (lambda ( prim)
+    (cases unaryOct prim
+      (plusOne8 () (proc-type (list oct-type) oct-type))
+      (restOne8 () (proc-type (list oct-type) oct-type))
+      )
+    )
+  )
+
+;;Evaluate binary primitives for Octs 
+(define applyOct-binaryType
+  (lambda ( prim)
+    (cases binaryOct prim
+      (sum8 () (proc-type (list oct-type oct-type) oct-type))
+      (rest8 () (proc-type (list oct-type oct-type) oct-type))
+      (mult8 () (proc-type (list oct-type oct-type) oct-type))
+      )
+    )
+  )
+
+
+
+
+(interpreter-types)
 
 
 ;PRUEBAS
