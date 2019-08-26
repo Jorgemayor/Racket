@@ -925,20 +925,27 @@
       (true-val () bool-type)
       (false-val () bool-type)
       (lit-id (id) (apply-tenv tenv id))
-      (empty-val () 0)
+      (empty-val () empty-type)
       (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp)
-                       (let
+;                       (cond [(check-equal-type! (type-of-expression test-exp tenv) bool-type test-exp)
+;                              (eval-batch-types true-exp tenv)]
+;                             [else ])
+
+                       (letrec
                            ((test-type (type-of-expression test-exp tenv))
-                            (false-type (type-of-expression false-exp tenv))
-                            (true-type (type-of-expression true-exp tenv))
-                            (elsif-test-type (type-of-expression elseiftest tenv))
-                            (elsif-true-type (type-of-expression elseIfTrue tenv))
-                            )
+                            (false-type (eval-batch-types false-exp tenv))
+                            (true-type (eval-batch-types true-exp tenv))
+                            (types-elsif-else (eval-conditionTypes elseiftest elseIfTrue false-exp tenv))
+                            (list-of-last-types
+                             (if (type? types-elsif-else)
+                                 (list (last-of-a-list true-type) types-elsif-else)
+                                 (cons (last-of-a-list true-type) types-elsif-else))
+                            ))
                          (check-equal-type! test-type bool-type test-exp)
-                         (check-equal-type! true-type false-type exp)
-                         (check-equal-type! elsif-test-type bool-type elseiftest)
-                         (check-equal-type! elsif-true-type exp)
-                         true-type)
+                         list-of-last-types
+                         (all-true?(recursive-equalType list-of-last-types exp))
+                         (car true-type)
+                        )
                        )
       (proc-exp (id texps args body) (type-of-proc-exp texps args body tenv)
                 )
@@ -1025,6 +1032,40 @@
                     (type-to-external-form t2)
                     exp)
         #t)))
+
+;auxiliary function that checks the types of a list
+;(define check-equal-typeList!
+;  (lambda (list exp)
+;    (cond
+;      [(type? list) #t]
+;      [(null? (cdr list)) #t]
+;      [else
+;       (list (check-equal-type! (car list) (cadr list) exp)
+;             (check-equal-typeList! (cdr list) exp))
+;       ])
+;    ))
+
+(define equal-type?
+  (lambda (a listed exp)
+    (cond
+      [(null? listed) empty]
+      [else
+       (cons (check-equal-type! a (car listed) exp)
+             (equal-type? a (cdr listed) exp))
+       ])
+    ))
+
+
+(define recursive-equalType
+  (lambda (L exp)
+    (cond
+      [(null? L) empty]
+      [else
+       (append (equal-type? (car L) (cdr L) exp)
+               (recursive-equalType (cdr L) exp))
+       ])
+    ))
+
 
 ;type-to-external-form: <type> -> lista o simbolo
 ; recibe un tipo y devuelve una representación del tipo facil de leer
@@ -1177,8 +1218,22 @@
     )
   )
 
+;auxiliary function that returns the last of a list of each batch of the elsif, if any, and of the else.
+;In order to compare the types of the last results.
+(define eval-conditionTypes
+  (lambda (elseiftest elseIfTrue false-exp tenv)
+    (cond [(null? elseiftest) (last-of-a-list(eval-batch-types false-exp tenv))]
+          [(check-equal-type! (type-of-expression (car elseiftest) tenv) bool-type elseiftest)
+           (list (last-of-a-list(eval-batch-types (car elseIfTrue) tenv)) (eval-conditionTypes (cdr elseiftest) (cdr elseIfTrue) false-exp tenv))])
+    )
+  )
 
-
+;auxiliary function that returns the last of a list
+(define last-of-a-list
+  (lambda (list)
+    (cond
+      [(null? list) empty]
+      [else  (car (reverse list))])))
 
 (interpreter-types)
 
