@@ -231,7 +231,7 @@
 
 
 
-;El Interpretador + checker (FrontEnd + Evaluación + señal para lectura )
+;interpreter-types + checker (FrontEnd + evaluation + signal for lecture )
 
 (define interpreter-types
   (sllgen:make-rep-loop  "--> "
@@ -242,7 +242,7 @@
 
 (define aux-interpreter
   (lambda (x)
-    ;(type-of-program x)
+    (type-of-program x)
     (if (all-true? (map verify-types (type-of-program x))) (eval-program  x) 'error)
     )
   )
@@ -942,7 +942,6 @@
                                  (cons (last-of-a-list true-type) types-elsif-else))
                             ))
                          (check-equal-type! test-type bool-type test-exp)
-                         list-of-last-types
                          (all-true?(recursive-equalType list-of-last-types exp))
                          (car true-type)
                         )
@@ -1222,9 +1221,9 @@
 ;In order to compare the types of the last results.
 (define eval-conditionTypes
   (lambda (elseiftest elseIfTrue false-exp tenv)
-    (cond [(null? elseiftest) (last-of-a-list(eval-batch-types false-exp tenv))]
+    (cond [(null? elseiftest) (list(last-of-a-list(eval-batch-types false-exp tenv)))]
           [(check-equal-type! (type-of-expression (car elseiftest) tenv) bool-type elseiftest)
-           (list (last-of-a-list(eval-batch-types (car elseIfTrue) tenv)) (eval-conditionTypes (cdr elseiftest) (cdr elseIfTrue) false-exp tenv))])
+           (append (list(last-of-a-list(eval-batch-types (car elseIfTrue) tenv))) (eval-conditionTypes (cdr elseiftest) (cdr elseIfTrue) false-exp tenv))])
     )
   )
 
