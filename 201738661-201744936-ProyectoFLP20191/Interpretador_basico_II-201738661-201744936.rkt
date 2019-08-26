@@ -1310,3 +1310,25 @@
 ;end
 ;a
 ;/
+
+;;PRUEBAS TIPOS
+;(arg-types-to-external-form(type-of-program (scan&parse "/
+;if((1+4)==3) then {
+;0
+;}
+;elsif ((1- 1) <= 0)
+;then {
+;1
+;}
+;elsif (1>100) then
+;{
+;2
+;}
+;else
+;{
+;3 
+;}
+;end
+;
+;/
+;")))
