@@ -269,7 +269,8 @@
                                            [args (eval-rands args env exps)])
                                        (if (procval? name)
                                            (apply-procedure name args env)
-                                           ("Attemp to apply non-procedure ~s" name))
+                                           (eopl:error 'Evaluation "Attemp to apply non-procedure ~s" id))
+                                       (eval-batch (a-batch (cdr exps)) env)
                                        )
                                      )
                        (else (aux-print exps env))
@@ -852,4 +853,25 @@
 ;}
 ;end
 ;a
+;/
+
+;Factorial
+;/
+;def fact (a)
+;{
+;if((a==1)or(a==0))
+;then
+;{
+;1
+;}
+;else
+;{
+;(a+{fact((a- 1))})
+;}
+;end
+;}
+;end
+;{fact ("h")}
+;{fact (1)}
+;{fact (0)}
 ;/
