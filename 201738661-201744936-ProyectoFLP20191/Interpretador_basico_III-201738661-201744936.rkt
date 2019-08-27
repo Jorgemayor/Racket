@@ -185,10 +185,10 @@
     (unary-op ("not") not-op)
     (unary-op ("!") not-op)
 
-;-----------Classes and Objects----------------
+    ;-----------Classes and Objects----------------
     (class-decl ("class" text "<" text (arbno "@" text) (arbno method-decl) "end") a-class)
     (method-decl ("def" text "(" (separated-list text ",") ")" "{" exp-batch "}" "end") a-method)
-    (expression ("Class" text ".new(" (separated-list expression ",") ")") new-obj)
+    (expression ("Class" text ".new(" (separated-list expression ",") ")") new-obj-exp)
     (expression ("do" text "." text "(" (separated-list expression ",") ")") app-method)
     (expression ("super" text "(" (separated-list expression ",") ")") super-exp)
     )
@@ -324,11 +324,11 @@
       (for-exp (iterator exp-ran-1 exp-ran-2 body)
                (letrec ((numberRange1 (eval-expression exp-ran-1 env exps))
                         (numberRange2 (eval-expression exp-ran-2 env exps))
-                     (list-iterator
-                      (if (< numberRange1 numberRange2) 
-                          (getInterval numberRange1 numberRange2) 
-                          (reverse (getInterval numberRange2 numberRange1))))
-                     (env-let (extend-env (listOfString->listOfSymbols (list iterator)) (list empty) env)))
+                        (list-iterator
+                         (if (< numberRange1 numberRange2) 
+                             (getInterval numberRange1 numberRange2) 
+                             (reverse (getInterval numberRange2 numberRange1))))
+                        (env-let (extend-env (listOfString->listOfSymbols (list iterator)) (list empty) env)))
                  (for-each
                   (lambda (value)
                     (begin
@@ -346,9 +346,24 @@
       (unary8 (exp1 op) (cons "oct" (reverse (applyOct-unary (reverse (cdr (eval-expression exp1 env exps))) op))))
       (unary16 (exp1 op) (cons "hex" (reverse (applyHex-unary (reverse (cdr (eval-expression exp1 env exps))) op))))
       
-      (new-obj (idClass exps) idClass)
-      (app-method (idObj idClass exps) idObj)
-      (super-exp (idObj exps) idObj)
+      (new-obj-exp (idClass rands)
+               (let ((args (eval-rands rands env))
+                     (obj (new-obj-exp idClass)))
+                 (find-method-and-apply
+                  'initialize idClass obj args)
+                 obj))
+      
+      (app-method (idObj idMethod rands)
+                  (let ((args (eval-rands rands env))
+                        (obj (eval-expression idObj env)))
+                    (find-method-and-apply
+                     idMethod (object->class-name obj) obj args)))
+      
+      (super-exp (idMethod rands)
+                 (let ((args (eval-rands rands env))
+                       (obj (apply-env env 'self)))
+                   (find-method-and-apply
+                    idMethod (apply-env env '%super) obj args)))
       )
     )
   )
@@ -812,25 +827,25 @@
   (lambda (c-decl)
     (cases class-decl c-decl
       (a-class (class-name super-name field-ids m-decls)
-        class-name))))
+               class-name))))
 
 (define class-decl->super-name
   (lambda (c-decl)
     (cases class-decl c-decl
       (a-class (class-name super-name field-ids m-decls)
-        super-name))))
+               super-name))))
 
 (define class-decl->field-ids
   (lambda (c-decl)
     (cases class-decl c-decl
       (a-class (class-name super-name field-ids m-decls)
-        field-ids))))
+               field-ids))))
 
 (define class-decl->method-decls
   (lambda (c-decl)
     (cases class-decl c-decl
       (a-class (class-name super-name field-ids m-decls)
-        m-decls))))
+               m-decls))))
 
 (define method-decl->method-name
   (lambda (md)
@@ -853,28 +868,28 @@
 
 ;; evaluar
 (define aux
-   (lambda (x)
-     x))
+  (lambda (x)
+    x))
 
 (define-datatype part part? 
   (a-part
-    (class-name symbol?)
-    (fields vector?)))
+   (class-name symbol?)
+   (fields vector?)))
 
 (define new-object
   (lambda (class-name)
     (if (eqv? class-name 'object)
-      '()
-      (let ((c-decl (lookup-class class-name)))
-        (cons
-          (make-first-part c-decl)
-          (new-object (class-decl->super-name c-decl)))))))
+        '()
+        (let ((c-decl (lookup-class class-name)))
+          (cons
+           (make-first-part c-decl)
+           (new-object (class-decl->super-name c-decl)))))))
 
 (define make-first-part
   (lambda (c-decl)
     (a-part
-      (class-decl->class-name c-decl)
-      (make-vector (length (class-decl->field-ids c-decl))))))
+     (class-decl->class-name c-decl)
+     (make-vector (length (class-decl->field-ids c-decl))))))
 
 ;;;;;;;;;;;;;;;; methods ;;;;;;;;;;;;;;;;
 
@@ -884,21 +899,21 @@
 (define find-method-and-apply
   (lambda (m-name host-name self args)
     (if (eqv? host-name 'object)
-      (eopl:error 'find-method-and-apply
-        "No method for name ~s" m-name)
-      (let ((m-decl (lookup-method-decl m-name
-                      (class-name->method-decls host-name))))
-        (if (method-decl? m-decl)
-          (apply-method m-decl host-name self args)
-          (find-method-and-apply m-name 
-            (class-name->super-name host-name)
-            self args))))))
+        (eopl:error 'find-method-and-apply
+                    "No method for name ~s" m-name)
+        (let ((m-decl (lookup-method-decl m-name
+                                          (class-name->method-decls host-name))))
+          (if (method-decl? m-decl)
+              (apply-method m-decl host-name self args)
+              (find-method-and-apply m-name 
+                                     (class-name->super-name host-name)
+                                     self args))))))
 
 (define view-object-as
   (lambda (parts class-name)
     (if (eqv? (part->class-name (car parts)) class-name)
-      parts
-      (view-object-as (cdr parts) class-name))))
+        parts
+        (view-object-as (cdr parts) class-name))))
 
 (define apply-method
   (lambda (m-decl host-name self args)
@@ -906,20 +921,20 @@
           (body (method-decl->body m-decl))
           (super-name (class-name->super-name host-name)))
       (eval-expression body
-        (extend-env
-          (cons '%super (cons 'self ids))
-          (cons super-name (cons self args))
-          (build-field-env 
-            (view-object-as self host-name)))))))
+                       (extend-env
+                        (cons '%super (cons 'self ids))
+                        (cons super-name (cons self args))
+                        (build-field-env 
+                         (view-object-as self host-name)))))))
 
 (define build-field-env
   (lambda (parts)
     (if (null? parts)
-      (empty-env)
-      (extend-env-refs
-        (part->field-ids (car parts))
-        (part->fields    (car parts))
-        (build-field-env (cdr parts))))))
+        (empty-env)
+        (extend-env-refs
+         (part->field-ids (car parts))
+         (part->fields    (car parts))
+         (build-field-env (cdr parts))))))
 
 ;;;;;;;;;;;;;;;; method environments ;;;;;;;;;;;;;;;;
 
@@ -949,7 +964,7 @@
       (cond
         ((null? env)
          (eopl:error 'lookup-class
-           "Unknown class ~s" name))
+                     "Unknown class ~s" name))
         ((eqv? (class-decl->class-name (car env)) name) (car env))
         (else (loop (cdr env)))))))
 
@@ -959,13 +974,13 @@
   (lambda (prt)
     (cases part prt
       (a-part (class-name fields)
-        class-name))))
+              class-name))))
 
 (define part->fields
   (lambda (prt)
     (cases part prt
       (a-part (class-name fields)
-        fields))))
+              fields))))
 
 (define part->field-ids
   (lambda (part)
