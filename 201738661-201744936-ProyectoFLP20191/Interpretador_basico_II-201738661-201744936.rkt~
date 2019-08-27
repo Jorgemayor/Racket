@@ -242,8 +242,8 @@
 
 (define aux-interpreter
   (lambda (x)
-    (type-of-program x)
-    ;(if (all-true? (map verify-types (type-of-program x))) (eval-program  x) 'error)
+    ;(type-of-program x)
+    (if (all-true? (map verify-types (type-of-program x))) (eval-program  x) 'error)
     )
   )
 
@@ -936,21 +936,14 @@
                          (car true-type)
                         )
                        )
-      (proc-exp (id texps args body) (type-of-proc-exp texps args body tenv exps))
+      (proc-exp (id texps args body) (type-of-proc-exp texps args body tenv exps)
+                )
       (oct-number (octRepresentation) oct-type)
       (hex-number (hexRepresentation) hex-type)
       (set-dec-exp (id assign body)  empty) ; it's evaluated in the eval-batch-types for ease
-      (unary-expression (unary-op body)
-                        (type-of-application
-                         (apply-unary-expType unary-op)
-                         (types-of-expressions (list body) tenv exps)
-                         unary-op
-                         (list body)
-                         exp
-                         ) 
-                        )
+      (unary-expression (unary-op body) 0)
       
-      (print-expression (listExps) empty-type); falta revisar los voids
+      (print-expression (listExps) 0); falta revisar los voids
       (primitive-exp (exp1 op exp2)
                      (type-of-application
                       (type-of-Binaryprimitive op)
@@ -1201,13 +1194,6 @@
       )
     )
   )
-;Check types of the unary op
-(define apply-unary-expType
-  (lambda (prim)
-    (cases unary-op prim
-      (not-op () (proc-type (list bool-type) bool-type))
-    )
-  ))
 
 ;auxiliary function that returns the last of a list of each batch of the elsif, if any, and of the else.
 ;In order to compare the types of the last results.
@@ -1238,19 +1224,6 @@
             (list (type-of-expression rands tenv rest-of-expressions))
             tenv)))
       (eval-batch-types (a-batch rest-of-expressions) tenv-for-batch))))
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 (interpreter-types)
 
