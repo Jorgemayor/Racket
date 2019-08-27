@@ -242,7 +242,7 @@
 
 (define aux-interpreter
   (lambda (x)
-    (type-of-program x)
+    ;(type-of-program x)
     (if (all-true? (map verify-types (type-of-program x))) (eval-program  x) 'error)
     )
   )
@@ -853,29 +853,23 @@
 (define (eval-batch-types batch env)
   (cases exp-batch batch
     (a-batch (exps)
-             (begin
-               (map
-                (lambda (exps)
-                  (type-of-expression exps env)
-                  ) exps))
-;                       (set-dec-exp (id assign body) 0)
-;                       (proc-exp (types id args body) 0)
-;                       (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) 0)
-;                       (evalProc-exp (id args) 
-;                                     0
-;                                     )
-                       
-                       
-               
+             (cond [(null? exps) empty]
+                   [else
+                    (cases expression (car exps)
+                
+                      (set-dec-exp (id assign body) 
+                                   (type-of-statement id body (cdr exps) env))
+                
+                      (else
+                       (cons 
+                        (type-of-expression (car exps) env (cdr exps))
+                        (eval-batch-types(a-batch(cdr exps)) env)))
+                      )])
              )
     ))
   
 
-(define eval-types-batch
-  (lambda (exps env)
-    (type-of-expression exps env)
-    )
-  )
+
 
 ;***********************************************************************************************************************
 ;*************************************************  Datatypes for types    **************************************************
@@ -918,24 +912,20 @@
 
 
 (define type-of-expression
-  (lambda (exp tenv)
+  (lambda (exp tenv exps)
     (cases expression exp
       (lit-text (text) string-type)
       (lit-number (number) int-type)
       (true-val () bool-type)
       (false-val () bool-type)
-      (lit-id (id) (apply-tenv tenv id))
+      (lit-id (id) (apply-tenv tenv (string->symbol id)))
       (empty-val () empty-type)
       (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp)
-;                       (cond [(check-equal-type! (type-of-expression test-exp tenv) bool-type test-exp)
-;                              (eval-batch-types true-exp tenv)]
-;                             [else ])
-
                        (letrec
-                           ((test-type (type-of-expression test-exp tenv))
+                           ((test-type (type-of-expression test-exp tenv exps))
                             (false-type (eval-batch-types false-exp tenv))
                             (true-type (eval-batch-types true-exp tenv))
-                            (types-elsif-else (eval-conditionTypes elseiftest elseIfTrue false-exp tenv))
+                            (types-elsif-else (eval-conditionTypes elseiftest elseIfTrue false-exp tenv exps))
                             (list-of-last-types
                              (if (type? types-elsif-else)
                                  (list (last-of-a-list true-type) types-elsif-else)
@@ -946,19 +936,18 @@
                          (car true-type)
                         )
                        )
-      (proc-exp (id texps args body) (type-of-proc-exp texps args body tenv)
+      (proc-exp (id texps args body) (type-of-proc-exp texps args body tenv exps)
                 )
       (oct-number (octRepresentation) oct-type)
       (hex-number (hexRepresentation) hex-type)
-      (set-dec-exp (id assign body) 0)
+      (set-dec-exp (id assign body)  empty) ; it's evaluated in the eval-batch-types for ease
       (unary-expression (unary-op body) 0)
       
-      (print-expression (listExps)
-                        0); falta revisar los voids
+      (print-expression (listExps) 0); falta revisar los voids
       (primitive-exp (exp1 op exp2)
                      (type-of-application
                       (type-of-Binaryprimitive op)
-                      (types-of-expressions (list exp1 exp2) tenv)
+                      (types-of-expressions (list exp1 exp2) tenv exps)
                       op
                       (list exp1 exp2)
                       exp
@@ -967,7 +956,7 @@
       (expPrimitiveString (expString op)
                           (type-of-application
                            (applyString-primitiveType op)
-                           (types-of-expressions (list expString) tenv)
+                           (types-of-expressions (list expString) tenv exps)
                            op
                            (list expString)
                            exp
@@ -979,8 +968,8 @@
       
       (evalProc-exp (id args)
                     (type-of-application
-                     (type-of-expression id tenv)
-                     (types-of-expressions args tenv)
+                     (type-of-expression id tenv exps)
+                     (types-of-expressions args tenv exps)
                      id
                      args
                      exp
@@ -988,7 +977,7 @@
       (binary8 (exp1 op exp2)
                (type-of-application
                       (applyOct-binaryType op)
-                      (types-of-expressions (list exp1 exp2) tenv)
+                      (types-of-expressions (list exp1 exp2) tenv exps)
                       op
                       (list exp1 exp2)
                       exp
@@ -996,7 +985,7 @@
       (binary16 (exp1 op exp2)
                 (type-of-application
                       (applyHex-binaryType op)
-                      (types-of-expressions (list exp1 exp2) tenv)
+                      (types-of-expressions (list exp1 exp2) tenv exps)
                       op
                       (list exp1 exp2)
                       exp
@@ -1004,7 +993,7 @@
       (unary8 (exp1 op)
               (type-of-application
                (applyOct-unaryType op)
-               (types-of-expressions (list exp1) tenv)
+               (types-of-expressions (list exp1) tenv exps)
                op
                (list exp1)
                exp
@@ -1012,7 +1001,7 @@
       (unary16 (exp1 op)
                (type-of-application
                 (applyHex-unaryType op)
-                (types-of-expressions (list exp1) tenv)
+                (types-of-expressions (list exp1) tenv exps)
                 op
                 (list exp1)
                 exp
@@ -1032,17 +1021,6 @@
                     exp)
         #t)))
 
-;auxiliary function that checks the types of a list
-;(define check-equal-typeList!
-;  (lambda (list exp)
-;    (cond
-;      [(type? list) #t]
-;      [(null? (cdr list)) #t]
-;      [else
-;       (list (check-equal-type! (car list) (cadr list) exp)
-;             (check-equal-typeList! (cdr list) exp))
-;       ])
-;    ))
 
 (define equal-type?
   (lambda (a listed exp)
@@ -1095,11 +1073,11 @@
 ;type-of-proc-exp: (list-of <type-exp>) (list-of <symbol>) <expression> <tenv> -> <type>
 ; función auxiliar para determinar el tipo de una expresión de creación de procedimiento
 (define type-of-proc-exp
-  (lambda (texps ids body tenv)
+  (lambda (texps ids body tenv exps)
     (let ((arg-types (expand-type-expressions texps)))
       (let ((result-type
              (type-of-expression body
-                                 (extend-tenv ids arg-types tenv))))
+                                 (extend-tenv ids arg-types tenv) exps)))
         (proc-type arg-types result-type)))))
 
 ;type-of-application: <type> (list-of <type>) <symbol> (list-of <symbol>) <expresion> -> <type>
@@ -1131,8 +1109,8 @@
 ;types-of-expressions: (list-of <type-exp>) <tenv> -> (list-of <type>)
 ; función que mapea la función type-of-expresion a una lista
 (define types-of-expressions
-  (lambda (rands tenv)
-    (map (lambda (exp) (type-of-expression exp tenv)) rands)))
+  (lambda (rands tenv exps)
+    (map (lambda (exp) (type-of-expression exp tenv exps)) rands)))
 
 ;type-of-primitive: <primitive> -> <type>
 ; función auxiliar para determinar el tipo de una primitiva
@@ -1220,10 +1198,10 @@
 ;auxiliary function that returns the last of a list of each batch of the elsif, if any, and of the else.
 ;In order to compare the types of the last results.
 (define eval-conditionTypes
-  (lambda (elseiftest elseIfTrue false-exp tenv)
+  (lambda (elseiftest elseIfTrue false-exp tenv exps)
     (cond [(null? elseiftest) (list(last-of-a-list(eval-batch-types false-exp tenv)))]
-          [(check-equal-type! (type-of-expression (car elseiftest) tenv) bool-type elseiftest)
-           (append (list(last-of-a-list(eval-batch-types (car elseIfTrue) tenv))) (eval-conditionTypes (cdr elseiftest) (cdr elseIfTrue) false-exp tenv))])
+          [(check-equal-type! (type-of-expression (car elseiftest) tenv exps) bool-type elseiftest)
+           (append (list(last-of-a-list(eval-batch-types (car elseIfTrue) tenv))) (eval-conditionTypes (cdr elseiftest) (cdr elseIfTrue) false-exp tenv exps))])
     )
   )
 
@@ -1233,6 +1211,19 @@
     (cond
       [(null? list) empty]
       [else  (car (reverse list))])))
+
+
+
+;type-of-statement: <symbol> <expression> <expression> <tenv> -> <type>
+; función auxiliar para determinar el tipo de una expresión let
+(define type-of-statement
+  (lambda (id rands rest-of-expressions tenv )
+    (let ((tenv-for-batch
+           (extend-tenv
+            (list (string->symbol id))
+            (list (type-of-expression rands tenv rest-of-expressions))
+            tenv)))
+      (eval-batch-types (a-batch rest-of-expressions) tenv-for-batch))))
 
 (interpreter-types)
 
