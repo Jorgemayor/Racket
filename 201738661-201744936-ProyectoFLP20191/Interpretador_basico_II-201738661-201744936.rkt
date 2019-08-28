@@ -244,8 +244,8 @@
 
 (define aux-interpreter
   (lambda (x)
-    (type-of-program x)
-   ;(if (all-true? (map verify-types (type-of-program x))) (eval-program  x) 'error)
+    ;(type-of-program x)
+   (if (all-true? (map verify-types (type-of-program x))) (eval-program  x) 'error)
     )
   )
 
@@ -909,8 +909,6 @@
 
                       (proc-exp (type-proc id texps args body)
                                 (type-of-recursive-procedure type-proc id texps args body env (cdr exps)))
-                      
-
                 
                       (else
                        (cons 
@@ -1010,14 +1008,13 @@
                )
       
       (evalProc-exp (id args)
-                    (type-of-expression id tenv exps)
-;                    (type-of-application
-;                     (type-of-expression id tenv exps)
-;                     (types-of-expressions args tenv exps)
-;                     id
-;                     args
-;                     exp
-;                     )
+                    (type-of-application
+                     (type-of-expression id tenv exps)
+                     (types-of-expressions args tenv exps)
+                     id
+                     args
+                     exp
+                     )
                     )
       
       (binary8 (exp1 op exp2)
@@ -1122,27 +1119,6 @@
                    (arg-types-to-external-form (cdr types))))))))
    
 
-;type-of-proc-exp: <lit-text> (list-of <type-exp>) (list-of <symbol>) <exp-batch> <tenv> <list-of-expressions> -> <list-of-Type-expressions>
-; Auxiliary function to determine the type of a procedure creation expression and extends
-; an environment with the procedure id and its type. For the subsequent evaluation of types in the batch.
-;(define type-of-proc-exp
-;  (lambda (id texps ids body tenv rest-of-expressions)
-;    (let ((arg-types (expand-type-expressions texps)))
-;      (letrec
-;          ((result-type
-;            (last-of-a-list
-;             (eval-batch-types body
-;                               (extend-tenv (listOfString->listOfSymbols ids) arg-types tenv))))
-;           (tenv-for-batch
-;            (extend-tenv
-;             (list (string->symbol id))
-;             (list (proc-type arg-types result-type) )
-;             tenv)))
-;        (eval-batch-types (a-batch rest-of-expressions) tenv-for-batch)
-;        )
-;      )
-;    )
-;  )
 
 ;type-of-recursive-procedure: <type-exp> <lit-text> (list-of <type-exp>) (list-of <symbol>) <exp-batch> <tenv> <list-of-expressions> -> <list-of-Type-expressions>
 ; Auxiliary function to determine the type of a recursive procedure  and extends
@@ -1322,18 +1298,6 @@
       (eval-batch-types (a-batch rest-of-expressions) tenv-for-batch))))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 (interpreter-types)
 
 
@@ -1476,5 +1440,43 @@
 ;p1
 ;}
 ;end
+;/
+
+;Error de tipos 
+;/
+;proc int def show (int x)
+;
+;{
+;x
+;}
+;end
+;{show ("a")}
+;/
+; Alcance de variables
+;/ $s="a";
+;proc int def show (int x)
+;{
+;$s=x; s
+;}
+;end
+;{show (5)}
+;s/
+
+;llamados recursivos
+;/
+;proc string def sum (int a)
+;{
+;if (a==8) then
+;{
+;"Es8"
+;}
+;else
+;{
+;{sum ((a+ 1))}
+;}
+;end
+;}
+;end {sum (6)}
+;
 ;/
 ;-------------------------------------------------------------------------------
