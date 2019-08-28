@@ -37,7 +37,7 @@
 ;;             := (proc-exp) def <text> (<text>) {, <text>}* { <exp-batch> } end
 ;;             := (evalProc-exp) { <text> (<expression>) {, expression}* }
 ;;             := (binary8) prim8 <expressionOct> <binaryOct> <expressionOct>;
-;;             := (unary8)un8 <expressionOct> <unaryOct> ;
+;; (expression := (unary8)un8 <expressionOct> <unaryOct> ;
 ;;             := (binary16) prim16 <expressionHex> <binaryHex> <expressionHex>;
 ;;             := (unary16) un16 <expressionHex> <unaryHex> ;
 
@@ -86,18 +86,6 @@
 ;;<unary-op>  := (not-op) not
 ;;            := (not-op) !
 
-;;-----------------Objects----------------------
-;; <class-decl> := (a-class) class <text> < <text> (@<text>)* (<method-decl>)* end
-
-;; <method-decl> := (a-method) def <text> () {<exp-batch>} end
-;;               := (a-method) def <text> (<text> (, <text>)*) {<exp-batch>} end
-
-;;<expression> := (new-obj-exp) Class <text>.new()
-;;             := (new-obj-exp) Class <text>.new(<text> (, <text>)*)
-;;             := (app-method) do <expression>.<text>()
-;;             := (app-method) do <expression>.<text>(<expression> (, <expression>)*)
-;;             := (super-exp) super <text>()
-;;             := (super-exp) super <text>(<expression> (, <expression>)*)
 
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
