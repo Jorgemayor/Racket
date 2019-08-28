@@ -402,7 +402,9 @@
   (lambda (exp1 exp2 prim)
     (cases binary-op prim
       (sum () 
-           (if (string? exp1)
+           (if (and
+                (string? exp1)
+                (string? exp2))
                (string-append exp1 exp2)
                (+ exp1 exp2 )
                )

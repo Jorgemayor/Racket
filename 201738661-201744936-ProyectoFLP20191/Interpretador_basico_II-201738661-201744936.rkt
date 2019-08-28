@@ -242,9 +242,8 @@
 
 (define aux-interpreter
   (lambda (x)
-    (type-of-program x)
-    ;(type? (car )) 
-    ;(if (all-true? (map verify-types (type-of-program x))) (eval-program  x) 'error)
+    ;(type-of-program x)
+    (if (all-true? (map verify-types (type-of-program x))) (eval-program  x) 'error)
     )
   )
 
@@ -441,7 +440,9 @@
   (lambda (exp1 exp2 prim)
     (cases binary-op prim
       (sum () 
-           (if (string? exp1)
+           (if (and
+                (string? exp1)
+                (string? exp2))
                (string-append exp1 exp2)
                (+ exp1 exp2 )
                )
@@ -952,10 +953,12 @@
                          ) 
                         )
       
-      (print-expression (listExps) empty-type); falta revisar los voids
+      (print-expression (listExps) (eval-batch-types(a-batch listExps) tenv)); falta revisar los voids
       (primitive-exp (exp1 op exp2)
                      (type-of-application
-                      (type-of-Binaryprimitive op)
+                      (type-of-Binaryprimitive op
+                                               (type-of-expression exp1 tenv exps)
+                                               (type-of-expression exp2 tenv exps))
                       (types-of-expressions (list exp1 exp2) tenv exps)
                       op
                       (list exp1 exp2)
@@ -972,33 +975,21 @@
                            )
                           )
       (for-exp (iterator exp-ran-1 exp-ran-2 body)
-                 (cond
-                   [(check-equal-type!(type-of-expression exp-ran-1 tenv exps) (type-of-expression exp-ran-2 tenv exps) exp)
-                    (letrec (
-                             (numberRange1 (eval-expression exp-ran-1 tenv exps))
-                             (numberRange2 (eval-expression exp-ran-2 tenv exps))
-                             (list-iterator
-                              (if (< numberRange1 numberRange2) 
-                                  (getInterval numberRange1 numberRange2) 
-                                  (reverse (getInterval numberRange2 numberRange1))))
-                             (list-iteratorDatatypes
-                              (map (lambda (number) (lit-number number))
-                                   list-iterator))
-                             (list-iteratorTypes
-                              (map (lambda (datatype) (type-of-expression datatype tenv exps))
-                                   list-iteratorDatatypes))
-
-                             )
-                      0
-                      ;retornar el último valor del batch interno
-                      
-                      )]
-
-                   )
-;              (type-of-for iterator
-;                           exp-ran-1
-;                           exp-ran-2
-;                           body tenv exps)
+               (cond
+                 [(and (equal? (type-of-expression exp-ran-1 tenv exps) int-type) (equal?(type-of-expression exp-ran-2 tenv exps) int-type))
+                  (letrec ((extended-env
+                            (extend-tenv
+                             (list (string->symbol iterator))
+                             (list int-type)
+                             tenv)))
+                    (last-of-a-list (eval-batch-types body extended-env)))
+                  ]
+                 [else (eopl:error 'check-int-type!
+                                   "Types didn’t match: ~s != int or ~s != int in~%~s"
+                                   (type-to-external-form (type-of-expression exp-ran-1 tenv exps))
+                                   (type-to-external-form (type-of-expression exp-ran-2 tenv exps))
+                                   exp)]
+                 )
                )
       
       (evalProc-exp (id args)
@@ -1148,11 +1139,11 @@
 ;type-of-primitive: <primitive> -> <type>
 ; función auxiliar para determinar el tipo de una primitiva
 (define type-of-Binaryprimitive
-  (lambda (prim)
+  (lambda (prim  exp1Type exp2Type)
     (cases binary-op prim
-      (sum () (or
-               (proc-type (list int-type int-type) int-type)
-               (proc-type (list string-type string-type) string-type))
+      (sum () (if (and (equal? exp1Type string-type) (equal? exp2Type string-type))
+                  (proc-type (list string-type string-type) string-type)
+                  (proc-type (list int-type int-type) int-type))
            )
       (subd () (proc-type (list int-type int-type) int-type))
       (mult () (proc-type (list int-type int-type) int-type))
