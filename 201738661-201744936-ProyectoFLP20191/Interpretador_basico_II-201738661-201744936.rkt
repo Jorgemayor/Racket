@@ -86,7 +86,9 @@
 ;;<unary-op>  := (not-op) not
 ;;            := (not-op) !
 
-
+(let ((time-stamp "Time-Version: 2019-08-28 16:18:14 dfried>"))
+  (eopl:printf " INTERPRETER 2 WITH CHECK OF TYPES ~a~%"
+    (substring time-stamp 13 30)))
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
 
@@ -243,7 +245,7 @@
 (define aux-interpreter
   (lambda (x)
     ;(type-of-program x)
-    (if (all-true? (map verify-types (type-of-program x))) (eval-program  x) 'error)
+   (if (all-true? (map verify-types (type-of-program x))) (eval-program  x) 'error)
     )
   )
 
@@ -292,7 +294,7 @@
                                                                              assign
                                                                              (list (eval-expression body env empty))
                                                                              env exps))
-                       (proc-exp (types id args body) (eval-expression (car exps)
+                       (proc-exp (id types args body) (eval-expression (car exps)
                                                                  (extend-env-recursively (list(string->symbol id))
                                                                                          (listOfString->listOfSymbols args)
                                                                                          body
@@ -905,7 +907,8 @@
                       (set-dec-exp (id assign body) 
                                    (type-of-statement id body (cdr exps) env))
 
-
+                      (proc-exp (id texps args body)
+                                (type-of-proc-exp id texps args body env (cdr exps)))
                 
                       (else
                        (cons 
@@ -923,6 +926,7 @@
       (false-val () bool-type)
       (lit-id (id) (apply-tenv tenv (string->symbol id)))
       (empty-val () empty-type)
+      
       (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp)
                        (letrec
                            ((test-type (type-of-expression test-exp tenv exps))
@@ -939,10 +943,15 @@
                          (car true-type)
                         )
                        )
-      (proc-exp (id texps args body) (type-of-proc-exp texps args body tenv exps))
+      
+      (proc-exp (id texps args body) empty) ; it's evaluated in the eval-batch-types for ease
+      
       (oct-number (octRepresentation) oct-type)
+      
       (hex-number (hexRepresentation) hex-type)
-      (set-dec-exp (id assign body)  empty) ; it's evaluated in the eval-batch-types for ease
+      
+      (set-dec-exp (id assign body)  empty); it's evaluated in the eval-batch-types for ease
+      
       (unary-expression (unary-op body)
                         (type-of-application
                          (apply-unary-expType unary-op)
@@ -953,7 +962,8 @@
                          ) 
                         )
       
-      (print-expression (listExps) (eval-batch-types(a-batch listExps) tenv)); falta revisar los voids
+      (print-expression (listExps) (eval-batch-types(a-batch listExps) tenv))
+      
       (primitive-exp (exp1 op exp2)
                      (type-of-application
                       (type-of-Binaryprimitive op
@@ -965,6 +975,7 @@
                       exp
                       )
                      )
+      
       (expPrimitiveString (expString op)
                           (type-of-application
                            (applyString-primitiveType op)
@@ -999,7 +1010,9 @@
                      id
                      args
                      exp
-                     ))
+                     )
+                    )
+      
       (binary8 (exp1 op exp2)
                (type-of-application
                       (applyOct-binaryType op)
@@ -1007,7 +1020,9 @@
                       op
                       (list exp1 exp2)
                       exp
-                      ))
+                      )
+               )
+      
       (binary16 (exp1 op exp2)
                 (type-of-application
                       (applyHex-binaryType op)
@@ -1015,7 +1030,9 @@
                       op
                       (list exp1 exp2)
                       exp
-                      ))
+                      )
+                )
+      
       (unary8 (exp1 op)
               (type-of-application
                (applyOct-unaryType op)
@@ -1023,7 +1040,9 @@
                op
                (list exp1)
                exp
-               ))
+               )
+              )
+      
       (unary16 (exp1 op)
                (type-of-application
                 (applyHex-unaryType op)
@@ -1031,9 +1050,11 @@
                 op
                 (list exp1)
                 exp
-                ))
+                )
+               )
       )
-    ))
+    )
+  )
 
 ;check-equal-type!: <type> <type> <expression> -> 
 ; verifica si dos tipos son iguales, muestra un mensaje de error en caso de que no lo sean
@@ -1094,15 +1115,27 @@
                    (arg-types-to-external-form (cdr types))))))))
    
 
-;type-of-proc-exp: (list-of <type-exp>) (list-of <symbol>) <expression> <tenv> -> <type>
-; función auxiliar para determinar el tipo de una expresión de creación de procedimiento
+;type-of-proc-exp: <lit-text> (list-of <type-exp>) (list-of <symbol>) <exp-batch> <tenv> <list-of-expressions> -> <list-of-Type-expressions>
+; Auxiliary function to determine the type of a procedure creation expression and extends
+; an environment with the procedure id and its type. For the subsequent evaluation of types in the batch.
 (define type-of-proc-exp
-  (lambda (texps ids body tenv exps)
+  (lambda (id texps ids body tenv rest-of-expressions)
     (let ((arg-types (expand-type-expressions texps)))
-      (let ((result-type
-             (type-of-expression body
-                                 (extend-tenv ids arg-types tenv) exps)))
-        (proc-type arg-types result-type)))))
+      (letrec
+          ((result-type
+            (last-of-a-list
+             (eval-batch-types body
+                               (extend-tenv (listOfString->listOfSymbols ids) arg-types tenv))))
+           (tenv-for-batch
+            (extend-tenv
+             (list (string->symbol id))
+             (list (proc-type arg-types result-type) )
+             tenv)))
+        (eval-batch-types (a-batch rest-of-expressions) tenv-for-batch)
+        )
+      )
+    )
+  )
 
 ;type-of-application: <type> (list-of <type>) <symbol> (list-of <symbol>) <expresion> -> <type>
 ; función auxiliar para determinar el tipo de una expresión de aplicación
