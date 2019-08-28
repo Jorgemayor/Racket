@@ -3,6 +3,7 @@
 Diseñe un interpretador para la siguiente gramática:
 
 Valores denotados: Texto + Número
+
 Valores expresado: Texto + Número
 
 ```
