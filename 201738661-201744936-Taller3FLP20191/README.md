@@ -6,25 +6,24 @@ Valores denotados: Texto + Número
 Valores expresado: Texto + Número
 
 ```
-\<programa> := (un-programa) \<expresion>
-```
+<programa> := (un-programa) <expresion>
 
-\<expresion> := (numero-lit) \<número>
-            := (texto-lit)"\<letras>"
-            := (primitiva-exp) \<primitiva> \[\<expresion> (\<expresion>)* (;)]
-
-\<primitiva> := (suma) +
+<expresion> := (numero-lit) <número>
+            := (texto-lit)" <letras>"
+            := (primitiva-exp) <primitiva> [<expresion> (<expresion>)* (;)]
+            
+<primitiva> := (suma) +
             := (resta) -
             := (div) /
             := (multiplicacion) *
             := (concat) concat
             := (length) length
-
+```
 Tenga en cuenta que:
-
-\<número> digito digito*
-\<letras> letra (letra | digito)*
-
+```
+<número> := digito digito*
+<letras> := letra (letra | digito)*
+```
 
 ## Ejemplos:
 +[1;2;3;4] debe retornar 10
