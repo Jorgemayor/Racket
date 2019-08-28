@@ -128,7 +128,7 @@
     (expression ("puts" (separated-list expression ",") ";") print-expression)
     (expression ("(" expression binary-op expression ")") primitive-exp)
     (expression ("[" expression primitiveString "]") expPrimitiveString)
-    (expression ("for" text "in" expression ".." expression "{"exp-batch"}" "end") for-exp) ;change in gramatic
+    (expression ("for" text "in" expression ".." expression "{"exp-batch"}" "end") for-exp) ;change in gramatic and new
     (expression ("def" text "(" (separated-list type-exp text ",") ")" "{"exp-batch"}" "end") proc-exp) ;new
     (expression ("{" expression "(" (separated-list expression ",") ")" "}") evalProc-exp) ; revision
     (expression ("bin8" expression binaryOct expression ";") binary8) ; change gramatic
@@ -243,6 +243,7 @@
 (define aux-interpreter
   (lambda (x)
     (type-of-program x)
+    ;(type? (car )) 
     ;(if (all-true? (map verify-types (type-of-program x))) (eval-program  x) 'error)
     )
   )
@@ -850,27 +851,6 @@
       (a-program (body) (eval-batch-types body (empty-tenv))))))
 
 
-(define (eval-batch-types batch env)
-  (cases exp-batch batch
-    (a-batch (exps)
-             (cond [(null? exps) empty]
-                   [else
-                    (cases expression (car exps)
-                
-                      (set-dec-exp (id assign body) 
-                                   (type-of-statement id body (cdr exps) env))
-                
-                      (else
-                       (cons 
-                        (type-of-expression (car exps) env (cdr exps))
-                        (eval-batch-types(a-batch(cdr exps)) env)))
-                      )])
-             )
-    ))
-  
-
-
-
 ;***********************************************************************************************************************
 ;*************************************************  Datatypes for types    **************************************************
 ;***********************************************************************************************************************
@@ -910,7 +890,29 @@
   (lambda (texps)
     (map expand-type-expression texps)))
 
+;***********************************************************************************************************************
+;*************************************************  Evaluations for types    **************************************************
+;***********************************************************************************************************************
 
+(define (eval-batch-types batch env)
+  (cases exp-batch batch
+    (a-batch (exps)
+             (cond [(null? exps) empty]
+                   [else
+                    (cases expression (car exps)
+                
+                      (set-dec-exp (id assign body) 
+                                   (type-of-statement id body (cdr exps) env))
+
+
+                
+                      (else
+                       (cons 
+                        (type-of-expression (car exps) env (cdr exps))
+                        (eval-batch-types(a-batch(cdr exps)) env)))
+                      )])
+             )
+    ))
 (define type-of-expression
   (lambda (exp tenv exps)
     (cases expression exp
@@ -970,7 +972,33 @@
                            )
                           )
       (for-exp (iterator exp-ran-1 exp-ran-2 body)
-               0
+                 (cond
+                   [(check-equal-type!(type-of-expression exp-ran-1 tenv exps) (type-of-expression exp-ran-2 tenv exps) exp)
+                    (letrec (
+                             (numberRange1 (eval-expression exp-ran-1 tenv exps))
+                             (numberRange2 (eval-expression exp-ran-2 tenv exps))
+                             (list-iterator
+                              (if (< numberRange1 numberRange2) 
+                                  (getInterval numberRange1 numberRange2) 
+                                  (reverse (getInterval numberRange2 numberRange1))))
+                             (list-iteratorDatatypes
+                              (map (lambda (number) (lit-number number))
+                                   list-iterator))
+                             (list-iteratorTypes
+                              (map (lambda (datatype) (type-of-expression datatype tenv exps))
+                                   list-iteratorDatatypes))
+
+                             )
+                      0
+                      ;retornar el último valor del batch interno
+                      
+                      )]
+
+                   )
+;              (type-of-for iterator
+;                           exp-ran-1
+;                           exp-ran-2
+;                           body tenv exps)
                )
       
       (evalProc-exp (id args)
@@ -1073,9 +1101,7 @@
              (type-to-external-form (car types))
              (cons '*
                    (arg-types-to-external-form (cdr types))))))))
-  
-
-
+   
 
 ;type-of-proc-exp: (list-of <type-exp>) (list-of <symbol>) <expression> <tenv> -> <type>
 ; función auxiliar para determinar el tipo de una expresión de creación de procedimiento
