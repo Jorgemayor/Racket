@@ -5,7 +5,9 @@ Diseñe un interpretador para la siguiente gramática:
 Valores denotados: Texto + Número
 Valores expresado: Texto + Número
 
-\<programa> := (un-programa) <expresion>
+```
+\<programa> := (un-programa) \<expresion>
+```
 
 \<expresion> := (numero-lit) \<número>
             := (texto-lit)"\<letras>"
