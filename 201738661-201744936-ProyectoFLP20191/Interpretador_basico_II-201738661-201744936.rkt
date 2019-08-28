@@ -131,7 +131,7 @@
     (expression ("(" expression binary-op expression ")") primitive-exp)
     (expression ("[" expression primitiveString "]") expPrimitiveString)
     (expression ("for" text "in" expression ".." expression "{"exp-batch"}" "end") for-exp) ;change in gramatic and new
-    (expression ("def" text "(" (separated-list type-exp text ",") ")" "{"exp-batch"}" "end") proc-exp) ;new
+    (expression ("proc" type-exp "def" text "(" (separated-list type-exp text ",") ")" "{"exp-batch"}" "end") proc-exp) ;new
     (expression ("{" expression "(" (separated-list expression ",") ")" "}") evalProc-exp) ; revision
     (expression ("bin8" expression binaryOct expression ";") binary8) ; change gramatic
     (expression ("un8" expression unaryOct ";") unary8) ; change gramatic
@@ -244,8 +244,8 @@
 
 (define aux-interpreter
   (lambda (x)
-    ;(type-of-program x)
-   (if (all-true? (map verify-types (type-of-program x))) (eval-program  x) 'error)
+    (type-of-program x)
+   ;(if (all-true? (map verify-types (type-of-program x))) (eval-program  x) 'error)
     )
   )
 
@@ -294,7 +294,7 @@
                                                                              assign
                                                                              (list (eval-expression body env empty))
                                                                              env exps))
-                       (proc-exp (id types args body) (eval-expression (car exps)
+                       (proc-exp (type-proc id types args body) (eval-expression (car exps)
                                                                  (extend-env-recursively (list(string->symbol id))
                                                                                          (listOfString->listOfSymbols args)
                                                                                          body
@@ -372,7 +372,7 @@
                   list-iterator)
                  )
                )
-      (proc-exp (id types args body) (eval-batch (a-batch exps) env))
+      (proc-exp (type-proc id types args body) (eval-batch (a-batch exps) env))
       (evalProc-exp (id args) (eval-batch (a-batch exps) env))
       (binary8 (exp1 op exp2) (cons "oct" (reverse (applyOct-binary (reverse (cdr (eval-expression exp1 env exps))) (reverse (cdr (eval-expression exp2 env exps))) op))))
       (binary16 (exp1 op exp2) (cons "hex" (reverse (applyHex-binary (reverse (cdr (eval-expression exp1 env exps))) (reverse (cdr (eval-expression exp2 env exps))) op))))
@@ -907,16 +907,23 @@
                       (set-dec-exp (id assign body) 
                                    (type-of-statement id body (cdr exps) env))
 
-                      (proc-exp (id texps args body)
-                                (type-of-proc-exp id texps args body env (cdr exps)))
+                      (proc-exp (type-proc id texps args body)
+                                (type-of-recursive-procedure type-proc id texps args body env (cdr exps)))
+                      
+
                 
                       (else
                        (cons 
                         (type-of-expression (car exps) env (cdr exps))
-                        (eval-batch-types(a-batch(cdr exps)) env)))
-                      )])
+                        (eval-batch-types(a-batch(cdr exps)) env)
+                        )
+                       )
+                      )
+                    ]
+                   )
              )
-    ))
+    )
+  )
 (define type-of-expression
   (lambda (exp tenv exps)
     (cases expression exp
@@ -926,6 +933,8 @@
       (false-val () bool-type)
       (lit-id (id) (apply-tenv tenv (string->symbol id)))
       (empty-val () empty-type)
+      (oct-number (octRepresentation) oct-type)
+      (hex-number (hexRepresentation) hex-type)
       
       (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp)
                        (letrec
@@ -944,11 +953,8 @@
                         )
                        )
       
-      (proc-exp (id texps args body) empty) ; it's evaluated in the eval-batch-types for ease
-      
-      (oct-number (octRepresentation) oct-type)
-      
-      (hex-number (hexRepresentation) hex-type)
+      (proc-exp (type-proc id texps args body) empty) ; it's evaluated in the eval-batch-types for ease
+
       
       (set-dec-exp (id assign body)  empty); it's evaluated in the eval-batch-types for ease
       
@@ -962,7 +968,7 @@
                          ) 
                         )
       
-      (print-expression (listExps) (eval-batch-types(a-batch listExps) tenv))
+      (print-expression (listExps) (last-of-a-list(eval-batch-types(a-batch listExps) tenv)))
       
       (primitive-exp (exp1 op exp2)
                      (type-of-application
@@ -1004,13 +1010,14 @@
                )
       
       (evalProc-exp (id args)
-                    (type-of-application
-                     (type-of-expression id tenv exps)
-                     (types-of-expressions args tenv exps)
-                     id
-                     args
-                     exp
-                     )
+                    (type-of-expression id tenv exps)
+;                    (type-of-application
+;                     (type-of-expression id tenv exps)
+;                     (types-of-expressions args tenv exps)
+;                     id
+;                     args
+;                     exp
+;                     )
                     )
       
       (binary8 (exp1 op exp2)
@@ -1118,27 +1125,50 @@
 ;type-of-proc-exp: <lit-text> (list-of <type-exp>) (list-of <symbol>) <exp-batch> <tenv> <list-of-expressions> -> <list-of-Type-expressions>
 ; Auxiliary function to determine the type of a procedure creation expression and extends
 ; an environment with the procedure id and its type. For the subsequent evaluation of types in the batch.
-(define type-of-proc-exp
-  (lambda (id texps ids body tenv rest-of-expressions)
-    (let ((arg-types (expand-type-expressions texps)))
-      (letrec
-          ((result-type
-            (last-of-a-list
-             (eval-batch-types body
-                               (extend-tenv (listOfString->listOfSymbols ids) arg-types tenv))))
-           (tenv-for-batch
-            (extend-tenv
-             (list (string->symbol id))
-             (list (proc-type arg-types result-type) )
-             tenv)))
-        (eval-batch-types (a-batch rest-of-expressions) tenv-for-batch)
-        )
-      )
-    )
-  )
+;(define type-of-proc-exp
+;  (lambda (id texps ids body tenv rest-of-expressions)
+;    (let ((arg-types (expand-type-expressions texps)))
+;      (letrec
+;          ((result-type
+;            (last-of-a-list
+;             (eval-batch-types body
+;                               (extend-tenv (listOfString->listOfSymbols ids) arg-types tenv))))
+;           (tenv-for-batch
+;            (extend-tenv
+;             (list (string->symbol id))
+;             (list (proc-type arg-types result-type) )
+;             tenv)))
+;        (eval-batch-types (a-batch rest-of-expressions) tenv-for-batch)
+;        )
+;      )
+;    )
+;  )
+
+;type-of-recursive-procedure: <type-exp> <lit-text> (list-of <type-exp>) (list-of <symbol>) <exp-batch> <tenv> <list-of-expressions> -> <list-of-Type-expressions>
+; Auxiliary function to determine the type of a recursive procedure  and extends
+; an environment with the procedure id and its type. For the subsequent evaluation of types in the batch.
+(define type-of-recursive-procedure
+  (lambda (result-texp proc-name texps ids body tenv rest-of-expressions)
+    (let ((arg-types (map (lambda (texp)
+                             (expand-type-expression texp))
+                           texps))
+          (result-type (expand-type-expression result-texp)))
+      (let ((the-proc-type
+              (proc-type arg-types result-type)))
+        (let ((tenv-for-body
+               (extend-tenv (list (string->symbol proc-name)) (list the-proc-type) tenv)))
+          (begin
+            (check-equal-type!
+             (last-of-a-list
+              (eval-batch-types
+              body
+              (extend-tenv (listOfString->listOfSymbols ids) arg-types tenv-for-body)))
+             result-type
+             body)
+            (eval-batch-types (a-batch rest-of-expressions) tenv-for-body)))))))
 
 ;type-of-application: <type> (list-of <type>) <symbol> (list-of <symbol>) <expresion> -> <type>
-; función auxiliar para determinar el tipo de una expresión de aplicación
+; función auxiliar para determinar el tipo de una expresión de aplicación de procedimientos
 (define type-of-application
   (lambda (rator-type rand-types rator rands exp)
     (cases type rator-type
@@ -1160,6 +1190,8 @@
        (eopl:error 'type-of-expression
                    "Rator not a proc type:~%~s~%had rator type ~s"
                    rator (type-to-external-form rator-type))))))
+
+
 
 
 
@@ -1378,7 +1410,7 @@
 ;end
 ;a
 ;/
-
+;--------------------------------------------------------------------------------
 ;;PRUEBAS TIPOS
 ;(arg-types-to-external-form(type-of-program (scan&parse "/
 ;if((1+4)==3) then {
@@ -1400,3 +1432,49 @@
 ;
 ;/
 ;")))
+;----------------------------------------------------------------------------------
+;Pruebas de tipos para procedimientos recursivos
+;/
+;proc string def y (string a, int b, int x)
+;{
+;a
+;
+;
+;}
+;end
+;
+;proc int def x (int a, int b, int x)
+;{
+;a
+;b
+;{y ("hola",2,3)}
+;}
+;end
+;
+;
+;/
+
+;/
+;proc string def y (string a, int b, int x)
+;{
+;a
+;{y ("a",2,3)}
+;a
+;}
+;end
+;y
+;/
+
+;/
+;proc string def p1 (string a, int b, int x)
+;{
+;a
+;}
+;end
+;proc (string*int*int->string) def p2 (string a, int b, int x)
+;{
+;p1
+;}
+;end
+;/
+;-------------------------------------------------------------------------------
