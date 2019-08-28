@@ -20,8 +20,8 @@ Valores expresado: Texto + Número
 
 Tenga en cuenta que:
 
-<número> digito digito*
-<letras> letra (letra | digito)*
+\<número> digito digito*
+\<letras> letra (letra | digito)*
 
 
 ## Ejemplos:
@@ -29,11 +29,11 @@ Tenga en cuenta que:
 -[3;4;5] debe retornar 4 que representa (- 3 (- 4 5))
 -[3;4;5;6] debe retornar -2 que representa (- 3 (- 4 (- 5 6)))
 -[3;4;5;6;3] debe retornar 1 que representa (- 3 (- 4 (- 5 (- 6 3))))
-+[1;2;-[3;4;5];4]  debe retornar 11
-+[1;2;-[3;4;+[5;6]];4] debe retornar 17
+\+[1;2;-[3;4;5];4]  debe retornar 11
+\+[1;2;-[3;4;+[5;6]];4] debe retornar 17
 *[3;4;5] debe retornar 60
-/[3;4;5] debe retornar 15/4 o su equivalente fracción mixta 3(3/4) tras la evaluación (/ 3 (/ 4 5))
-/[3;4;5;7] debe retornar 15/28 tras la evaluación (/ 3 (/ 4 (/ 5 7)))
+\/[3;4;5] debe retornar 15/4 o su equivalente fracción mixta 3(3/4) tras la evaluación (/ 3 (/ 4 5))
+\/[3;4;5;7] debe retornar 15/28 tras la evaluación (/ 3 (/ 4 (/ 5 7)))
 "hola" retorna "hola"
 "x" retorna "x"
 hola retorna un error
