@@ -158,33 +158,33 @@
     (binary-op ("or") or-op)
     (binary-op ("||") or-op)
     (binary-op ("..") in-range)
-    
+
     (binaryOct ("+8+") sum8)
     (binaryOct ("-8-") rest8)
     (binaryOct ("*8*") mult8)
     
     (unaryOct ("++8++") plusOne8)
     (unaryOct ("--8--") restOne8)
-    
+
     (binaryHex ("+16+") sum16)
     (binaryHex ("-16-") rest16)
     (binaryHex ("*16*") mult16)
     
     (unaryHex ("++16++") plusOne16)
     (unaryHex ("--16--") restOne16)
-    
+
     (primitiveString (".length") sizeString) 
-    
+
     (assign-op ("=") declarative-opp)
     (assign-op ("+=") add-eq)
     (assign-op ("-=") diff-eq)
     (assign-op ("*=") mult-eq)
     (assign-op ("/=") div-eq)
     (assign-op ("**=") pow-eq)
-    
+
     (unary-op ("not") not-op)
     (unary-op ("!") not-op)
-    
+
     ;-----------Classes and Objects----------------
     (class-decl ("class" text "<" text (arbno "@" text) (arbno method-decl) "end") a-class)
     (method-decl ("def" text "(" (separated-list text ",") ")" "{" exp-batch "}" "end") a-method)
@@ -237,8 +237,7 @@
     (cases program pgm
       (a-program (classes body)
                  (elaborate-class-decls! classes)
-                 (eval-batch body (empty-env))
-                 )
+                 the-class-env)
       )
     )
   )
@@ -348,23 +347,23 @@
       (unary16 (exp1 op) (cons "hex" (reverse (applyHex-unary (reverse (cdr (eval-expression exp1 env exps))) op))))
       
       (new-obj-exp (idClass rands)
-                   (let ((args (eval-rands rands env exps))
-                         (obj (new-object (string->symbol idClass))))
-                     (find-method-and-apply
-                      'initialize idClass obj args)
-                     obj))
+               (let ((args (eval-rands rands env))
+                     (obj (new-obj-exp idClass)))
+                 (find-method-and-apply
+                  'initialize idClass obj args)
+                 obj))
       
       (app-method (idObj idMethod rands)
-                  (let ((args (eval-rands rands env exps))
-                        (obj (eval-expression (string->symbol idObj) env exps)))
+                  (let ((args (eval-rands rands env))
+                        (obj (eval-expression idObj env)))
                     (find-method-and-apply
-                     (string->symbol idMethod) (object->class-name obj) obj args)))
+                     idMethod (object->class-name obj) obj args)))
       
       (super-exp (idMethod rands)
-                 (let ((args (eval-rands rands env exps))
+                 (let ((args (eval-rands rands env))
                        (obj (apply-env env 'self)))
                    (find-method-and-apply
-                    (string->symbol idMethod) (apply-env env '%super) obj args)))
+                    idMethod (apply-env env '%super) obj args)))
       )
     )
   )
@@ -828,19 +827,19 @@
   (lambda (c-decl)
     (cases class-decl c-decl
       (a-class (class-name super-name field-ids m-decls)
-               (string->symbol class-name)))))
+               class-name))))
 
 (define class-decl->super-name
   (lambda (c-decl)
     (cases class-decl c-decl
       (a-class (class-name super-name field-ids m-decls)
-               (string->symbol super-name)))))
+               super-name))))
 
 (define class-decl->field-ids
   (lambda (c-decl)
     (cases class-decl c-decl
       (a-class (class-name super-name field-ids m-decls)
-               (listOfString->listOfSymbols field-ids)))))
+               field-ids))))
 
 (define class-decl->method-decls
   (lambda (c-decl)
@@ -851,24 +850,21 @@
 (define method-decl->method-name
   (lambda (md)
     (cases method-decl md
-      (a-method (method-name ids body)
-                (string->symbol method-name)))))
+      (a-method (method-name ids body) method-name))))
 
 (define method-decl->ids
   (lambda (md)
     (cases method-decl md
-      (a-method (method-name ids body)
-                (listOfString->listOfSymbols ids)))))
+      (a-method (method-name ids body) ids))))
 
 (define method-decl->body
   (lambda (md)
     (cases method-decl md
-      (a-method (method-name ids body)
-                body))))
+      (a-method (method-name ids body) body))))
 
 (define method-decls->method-names
   (lambda (mds)
-    (listOfString->listOfSymbols (map method-decl->method-name mds))))
+    (map method-decl->method-name mds)))
 
 ;; evaluar
 (define aux
@@ -924,12 +920,12 @@
     (let ((ids (method-decl->ids m-decl))
           (body (method-decl->body m-decl))
           (super-name (class-name->super-name host-name)))
-      (eval-batch body
-                  (extend-env
-                   (cons '%super (cons 'self ids))
-                   (cons super-name (cons self args))
-                   (build-field-env 
-                    (view-object-as self host-name)))))))
+      (eval-expression body
+                       (extend-env
+                        (cons '%super (cons 'self ids))
+                        (cons super-name (cons self args))
+                        (build-field-env 
+                         (view-object-as self host-name)))))))
 
 (define build-field-env
   (lambda (parts)
@@ -951,7 +947,7 @@
       ((eqv? m-name (method-decl->method-name (car m-decls)))
        (car m-decls))
       (else (lookup-method-decl m-name (cdr m-decls))))))
-
+      
 ;;;;;;;;;;;;;;;; class environments ;;;;;;;;;;;;;;;;
 
 ;;; we'll just use the list of class-decls.
@@ -969,7 +965,7 @@
         ((null? env)
          (eopl:error 'lookup-class
                      "Unknown class ~s" name))
-        ((eq? (class-decl->class-name (car env)) name) (car env))
+        ((eqv? (class-decl->class-name (car env)) name) (car env))
         (else (loop (cdr env)))))))
 
 ;;;;;;;;;;;;;;;; selectors of all sorts ;;;;;;;;;;;;;;;;
@@ -978,20 +974,21 @@
   (lambda (prt)
     (cases part prt
       (a-part (class-name fields)
-               class-name))))
+              class-name))))
 
 (define part->fields
   (lambda (prt)
     (cases part prt
-      (a-part (class-name fields) fields))))
+      (a-part (class-name fields)
+              fields))))
 
 (define part->field-ids
   (lambda (part)
-    (listOfString->listOfSymbols (class-decl->field-ids (part->class-decl part)))))
+    (class-decl->field-ids (part->class-decl part))))
 
 (define part->class-decl
   (lambda (part)
-    (lookup-class (string->symbol (part->class-name part)))))
+    (lookup-class (part->class-name part))))
 
 (define part->method-decls
   (lambda (part)
@@ -999,20 +996,21 @@
 
 (define part->super-name
   (lambda (part)
-    (string->symbol (class-decl->super-name (part->class-decl part)))))
+    (class-decl->super-name (part->class-decl part))))
 
 (define class-name->method-decls
   (lambda (class-name)
-    (class-decl->method-decls (lookup-class (string->symbol class-name)))))
+    (class-decl->method-decls (lookup-class class-name))))
 
 (define class-name->super-name
   (lambda (class-name)
-    (class-decl->super-name (lookup-class (string->symbol class-name)))))
+    (class-decl->super-name (lookup-class class-name))))
 
 (define object->class-name
   (lambda (parts)
-    (string->symbol (part->class-name (car parts)))))
+    (part->class-name (car parts))))
 
+;;
 
 (interpreter)
 
