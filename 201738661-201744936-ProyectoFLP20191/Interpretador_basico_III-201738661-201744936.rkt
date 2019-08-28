@@ -37,7 +37,7 @@
 ;;             := (proc-exp) def <text> (<text>) {, <text>}* { <exp-batch> } end
 ;;             := (evalProc-exp) { <text> (<expression>) {, expression}* }
 ;;             := (binary8) prim8 <expressionOct> <binaryOct> <expressionOct>;
-;; (expression := (unary8)un8 <expressionOct> <unaryOct> ;
+;;             := (unary8)un8 <expressionOct> <unaryOct> ;
 ;;             := (binary16) prim16 <expressionHex> <binaryHex> <expressionHex>;
 ;;             := (unary16) un16 <expressionHex> <unaryHex> ;
 
@@ -86,6 +86,18 @@
 ;;<unary-op>  := (not-op) not
 ;;            := (not-op) !
 
+;;-----------------Objects----------------------
+;; <class-decl> := (a-class) class <text> < <text> (@<text>)* (<method-decl>)* end
+
+;; <method-decl> := (a-method) def <text> () {<exp-batch>} end
+;;               := (a-method) def <text> (<text> (, <text>)*) {<exp-batch>} end
+
+;;<expression> := (new-obj-exp) Class <text>.new()
+;;             := (new-obj-exp) Class <text>.new(<text> (, <text>)*)
+;;             := (app-method) do <expression>.<text>()
+;;             := (app-method) do <expression>.<text>(<expression> (, <expression>)*)
+;;             := (super-exp) super <text>()
+;;             := (super-exp) super <text>(<expression> (, <expression>)*)
 
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
@@ -189,7 +201,7 @@
     (class-decl ("class" text "<" text (arbno "@" text) (arbno method-decl) "end") a-class)
     (method-decl ("def" text "(" (separated-list text ",") ")" "{" exp-batch "}" "end") a-method)
     (expression ("Class" text ".new(" (separated-list expression ",") ")") new-obj-exp)
-    (expression ("do" text "." text "(" (separated-list expression ",") ")") app-method)
+    (expression ("do" expression "." text "(" (separated-list expression ",") ")") app-method)
     (expression ("super" text "(" (separated-list expression ",") ")") super-exp)
     )
   )
@@ -355,9 +367,9 @@
                       'initialize (string->symbol idClass) obj args)
                      obj))
       
-      (app-method (bodyMethod idMethod rands)
+      (app-method (idObject idMethod rands)
                   (let ((args (eval-rands rands env exps))
-                        (obj (eval-expression bodyMethod env exps)))
+                        (obj (eval-expression idObject env empty)))
                     (find-method-and-apply
                      (string->symbol idMethod) (object->class-name obj) obj args)))
       
@@ -1011,7 +1023,7 @@
 
 (define object->class-name
   (lambda (parts)
-    (string->symbol (part->class-name (car parts)))))
+    (part->class-name (car parts))))
 
 
 (interpreter)
