@@ -248,31 +248,25 @@
   (cases exp-batch batch
     (a-batch (exps)
              (cond
-               [(null? exps) "Exit with code 0"]
+               [(null? exps) exps]
                [else (cases expression (car exps)
                        (set-dec-exp (id assign body) (applyAssigns-primitive (listOfString->listOfSymbols (list id))
                                                                              assign
                                                                              (list (eval-expression body env empty))
                                                                              env exps))
-                       (proc-exp (id args body) (eval-expression (car exps)
-                                                                 (extend-env-recursively (list(string->symbol id))
-                                                                                         (listOfString->listOfSymbols args)
-                                                                                         body
-                                                                                         env)
-                                                                 (cdr exps)))
-                       (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) (if (eval-expression test-exp env empty)
-                                                                                                (eval-batch true-exp env )
-                                                                                                (eval-condition elseiftest elseIfTrue false-exp env)
-                                                                                                ))
-                       (evalProc-exp (id args) 
-                                     (let ([name (eval-expression id env exps)]
-                                           [args (eval-rands args env exps)])
-                                       (if (procval? name)
-                                           (apply-procedure name args env)
-                                           ("Attemp to apply non-procedure ~s" name))
-                                       )
-                                     )
-                       (else (aux-print exps env))
+                       (proc-exp (id args body) 
+                                 (let ((extended-env (extend-env-recursively (list(string->symbol id))
+                                                                             (listOfString->listOfSymbols args)
+                                                                             body
+                                                                             env)))
+                                   (eval-batch (a-batch(cdr exps)) extended-env)
+                                   ))
+                       (else
+                        (cons 
+                         (eval-expression (car exps) env (cdr exps))
+                         (eval-batch(a-batch(cdr exps)) env)
+                         )
+                        )
                        )]
                )
              )
@@ -300,13 +294,16 @@
       (empty-val () (eopl:pretty-print '=>nil))
       (hex-number (hexRepresentation) (cons 'hex hexRepresentation) )
       (oct-number (octRepresentation) (cons 'oct octRepresentation))
-      (set-dec-exp (id assign body) (eval-batch (a-batch exps) env))
+      (set-dec-exp (id assign body) empty)
       (unary-expression (unary-op body) (apply-unary-exp unary-op (eval-expression body env empty)))
-      (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp) (eval-batch (a-batch exps) env))
+      (condicional-exp (test-exp true-exp elseiftest elseIfTrue false-exp)
+                       (if (eval-expression test-exp env empty)
+                           (last-of-a-list(eval-batch true-exp env ))
+                           (eval-condition elseiftest elseIfTrue false-exp env)
+                           )                                                                                                                    
+                       )
       (print-expression (listExps)
-                        (for-each 
-                         (lambda (x) 
-                           (eopl:pretty-print(eval-expression x env empty))) listExps)); falta revisar los voids
+                        (last-of-a-list(eval-batch(a-batch listExps) env))); falta revisar los voids
       (primitive-exp (exp1 op exp2)
                      (let ((value1 (eval-expression exp1 env empty))
                            (value2 (eval-expression exp2 env empty))
@@ -317,23 +314,31 @@
       (for-exp (iterator exp-ran-1 exp-ran-2 body)
                (letrec ((numberRange1 (eval-expression exp-ran-1 env exps))
                         (numberRange2 (eval-expression exp-ran-2 env exps))
-                     (list-iterator
-                      (if (< numberRange1 numberRange2) 
-                          (getInterval numberRange1 numberRange2) 
-                          (reverse (getInterval numberRange2 numberRange1))))
-                     (env-let (extend-env (listOfString->listOfSymbols (list iterator)) (list empty) env)))
-                 (for-each
+                        (list-iterator
+                         (if (< numberRange1 numberRange2) 
+                             (getInterval numberRange1 numberRange2) 
+                             (reverse (getInterval numberRange2 numberRange1))))
+                        (env-local (extend-env (listOfString->listOfSymbols (list iterator)) (list empty) env)))              
+                 (map
                   (lambda (value)
                     (begin
-                      (apply-set-refFor (string->symbol iterator) value env-let)
-                      (eval-batch body env-let)
+                      (apply-set-refFor (string->symbol iterator) (car list-iterator) env-local)
+                      (last-of-a-list(eval-batch body env-local))
                       )
                     )
                   list-iterator)
                  )
                )
-      (proc-exp (id args body) (eval-batch (a-batch exps) env))
-      (evalProc-exp (id args) (eval-batch (a-batch exps) env))
+      (proc-exp (id args body) empty)
+      (evalProc-exp (id args) 
+                    (let ([name (eval-expression id env exps)]
+                          [args (eval-rands args env exps)])
+                      (if (procval? name)
+                          (apply-procedure name args env)
+                          ("Attemp to apply non-procedure ~s" name))
+                      )
+                    )
+                                     
       (binary8 (exp1 op exp2) (cons "oct" (reverse (applyOct-binary (reverse (cdr (eval-expression exp1 env exps))) (reverse (cdr (eval-expression exp2 env exps))) op))))
       (binary16 (exp1 op exp2) (cons "hex" (reverse (applyHex-binary (reverse (cdr (eval-expression exp1 env exps))) (reverse (cdr (eval-expression exp2 env exps))) op))))
       (unary8 (exp1 op) (cons "oct" (reverse (applyOct-unary (reverse (cdr (eval-expression exp1 env exps))) op))))
@@ -371,8 +376,8 @@
 
 (define eval-condition
   (lambda (elseiftest elseIfTrue false-exp env)
-    (cond [(null? elseiftest) (eval-batch false-exp env)]
-          [(eval-expression (car elseiftest) env empty) (eval-batch (car elseIfTrue) env)]
+    (cond [(null? elseiftest) (last-of-a-list(eval-batch false-exp env))]
+          [(eval-expression (car elseiftest) env empty)( last-of-a-list(eval-batch (car elseIfTrue) env))]
           [#true (eval-condition (cdr elseiftest) (cdr elseIfTrue) false-exp env)])
     )
   )
@@ -402,7 +407,9 @@
   (lambda (exp1 exp2 prim)
     (cases binary-op prim
       (sum () 
-           (if (string? exp1)
+           (if (and
+                (string? exp1)
+                (string? exp2))
                (string-append exp1 exp2)
                (+ exp1 exp2 )
                )
@@ -537,7 +544,13 @@
   (lambda (id assign body env exps)
     (if (boolean? (apply-env env (car id)))
         (cases assign-op assign
-          (declarative-opp () (eval-expression (car exps) (extend-env id body env) (cdr exps)))
+          (declarative-opp () (let ((env-for-batch
+                                     (extend-env
+                                      id
+                                      body
+                                      env)))
+                                (eval-batch (a-batch exps) env-for-batch))
+                           )
           (add-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
           (diff-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
           (mult-eq () (eopl:error 'Assign "undefined local variable or method '~s'" (car id)))
@@ -619,7 +632,7 @@
   (lambda (proc args env)
     (cases procval proc
       (closure (ids body env)
-               (eval-batch body (extend-env ids args env ))
+               (last-of-a-list(eval-batch body (extend-env ids args env )))
                )
       )
     )
@@ -767,6 +780,13 @@
       )
     )
   )
+;auxiliary function that returns the last of a list
+(define last-of-a-list
+  (lambda (list)
+    (cond
+      [(null? list) empty]
+      [else  (car (reverse list))])))
+
 
 (interpreter)
 
@@ -843,5 +863,41 @@
 ;}
 ;end
 ;a
+;/
+
+;Aplicado con listas, recursion y suma  
+;/
+;def sum (a)
+;{
+;if (a==8) then
+;{
+;8
+;}
+;else
+;{
+;{sum ((a+ 1))}
+;}
+;end
+;}
+;end
+;(1+{sum (6)})
+;/
+
+; Factorial 
+;/
+;def fact (a)
+;{
+;if ( (a==0) || (a==1)) then
+;{
+;1
+;}
+;else
+;{
+;(a * {fact ((a- 1))} )
+;}
+;end
+;}
+;end
+;{fact (5)}
 ;/
 
