@@ -7,20 +7,15 @@ Valores expresado: Texto + Número
 
 \<programa> := (un-programa) <expresion>
 
-\<expresion> := (numero-lit) <número>
-            := (texto-lit)"<letras>"
-            := (primitiva-exp) <primitiva> [expresion (expresion*) (;)]
+\<expresion> := (numero-lit) \<número>
+            := (texto-lit)"\<letras>"
+            := (primitiva-exp) \<primitiva> \[\<expresion> (\<expresion>)* (;)]
 
 \<primitiva> := (suma) +
-
             := (resta) -
-
             := (div) /
-
             := (multiplicacion) *
-
             := (concat) concat
-
             := (length) length
 
 Tenga en cuenta que:
