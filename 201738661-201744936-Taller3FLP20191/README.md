@@ -1,4 +1,4 @@
-#Enunciado taller 3
+# Enunciado taller 3
 
 Diseñe un interpretador para la siguiente gramática:
 
@@ -9,17 +9,15 @@ Valores expresado: Texto + Número
 
 
 <expresion> := (numero-lit) <número>
-
-                        := (texto-lit)"<letras>"
-                        := (primitiva-exp) <primitiva> [expresion (expresion*) (;)]
+            := (texto-lit)"<letras>"
+            := (primitiva-exp) <primitiva> [expresion (expresion*) (;)]
 
 <primitiva> := (suma) +
-                      := (resta) -
-                      := (div) /
-                      := (multiplicacion) *
-                      := (concat) concat
-
-                      := (length) length
+            := (resta) -
+            := (div) /
+            := (multiplicacion) *
+            := (concat) concat
+            := (length) length
 
 Tenga en cuenta que:
 
@@ -27,7 +25,7 @@ Tenga en cuenta que:
 <letras> letra (letra | digito)*
 
 
-##Ejemplos:
+## Ejemplos:
 +[1;2;3;4] debe retornar 10
 -[3;4;5] debe retornar 4 que representa (- 3 (- 4 5))
 -[3;4;5;6] debe retornar -2 que representa (- 3 (- 4 (- 5 6)))
@@ -46,5 +44,5 @@ length["Hola"] debe retornar 4
 length["Hola"; " mundo"; "FLP"] debe retornar 4, la longitud de la primer cadena
 
 
-##Aclaraciones:
+## Aclaraciones:
 - Los textos se toman entre comillas (las comillas trabájelas en la gramática). Captúrelas en la representación léxica como string.
