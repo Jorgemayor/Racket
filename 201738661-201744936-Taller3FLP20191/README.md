@@ -7,7 +7,6 @@ Valores expresado: Texto + Número
 
 <programa> := (un-programa) <expresion>
 
-
 <expresion> := (numero-lit) <número>
             := (texto-lit)"<letras>"
             := (primitiva-exp) <primitiva> [expresion (expresion*) (;)]
