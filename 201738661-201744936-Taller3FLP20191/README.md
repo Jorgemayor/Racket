@@ -12,10 +12,15 @@ Valores expresado: Texto + Número
             := (primitiva-exp) <primitiva> [expresion (expresion*) (;)]
 
 \<primitiva> := (suma) +
+
             := (resta) -
+
             := (div) /
+
             := (multiplicacion) *
+
             := (concat) concat
+
             := (length) length
 
 Tenga en cuenta que:
@@ -42,14 +47,20 @@ Tenga en cuenta que:
 /[3;4;5] debe retornar 15/4 o su equivalente fracción mixta 3(3/4) tras la evaluación (/ 3 (/ 4 5))
 
 /[3;4;5;7] debe retornar 15/28 tras la evaluación (/ 3 (/ 4 (/ 5 7)))
-"hola" retorna "hola"
-"x" retorna "x"
-hola retorna un error
-x retorna un error
-concat["Hola"; "mundo"; "FLP"] debe retornar "HolamundoFLP"
-length["Hola"] debe retornar 4
-length["Hola"; " mundo"; "FLP"] debe retornar 4, la longitud de la primer cadena
 
+"hola" retorna "hola"
+
+"x" retorna "x"
+
+hola retorna un error
+
+x retorna un error
+
+concat["Hola"; "mundo"; "FLP"] debe retornar "HolamundoFLP"
+
+length["Hola"] debe retornar 4
+
+length["Hola"; " mundo"; "FLP"] debe retornar 4, la longitud de la primer cadena
 
 ## Aclaraciones:
 - Los textos se toman entre comillas (las comillas trabájelas en la gramática). Captúrelas en la representación léxica como string.
