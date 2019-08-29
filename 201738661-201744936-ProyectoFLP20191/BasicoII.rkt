@@ -1,7 +1,7 @@
 #lang eopl
-; tITULO
+; Project of Essentials of Programming Languages
 ; 
-; 201738661-201744936 - Interpretador Basico II
+; 201738661-201744936 - Basic interpreter II
 ; 
 ; Developers:
 ; 
