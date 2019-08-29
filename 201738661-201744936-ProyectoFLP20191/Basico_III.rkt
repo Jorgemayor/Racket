@@ -1,5 +1,5 @@
 #lang eopl
-; Project Essentials of programming languages
+; Project of Essentials of Programming Languages
 ; 
 ; 201738661-201744936 - Interpretador Basico III
 ; 
