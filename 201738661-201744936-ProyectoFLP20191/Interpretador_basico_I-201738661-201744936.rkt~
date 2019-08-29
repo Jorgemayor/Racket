@@ -1,7 +1,7 @@
 #lang eopl
 ; Proyecto Fundamentos de lenguaje de programacion
 ; 
-; 201738661-201744936 - Interpretador Basico III
+; 201738661-201744936 - Interpretador Basico I
 ; 
 ; Developers:
 ; 
@@ -37,7 +37,7 @@
 ;;             := (proc-exp) def <text> (<text>) {, <text>}* { <exp-batch> } end
 ;;             := (evalProc-exp) { <text> (<expression>) {, expression}* }
 ;;             := (binary8) prim8 <expressionOct> <binaryOct> <expressionOct>;
-;;             := (unary8)un8 <expressionOct> <unaryOct> ;
+;; (expression := (unary8)un8 <expressionOct> <unaryOct> ;
 ;;             := (binary16) prim16 <expressionHex> <binaryHex> <expressionHex>;
 ;;             := (unary16) un16 <expressionHex> <unaryHex> ;
 
@@ -86,25 +86,9 @@
 ;;<unary-op>  := (not-op) not
 ;;            := (not-op) !
 
-;;-----------------Objects----------------------
-;; <class-decl> := (a-class) class <text> < <text> (@<text>)* (<method-decl>)* end
-
-;; <method-decl> := (a-method) def <text> () {<exp-batch>} end
-;;               := (a-method) def <text> (<text> (, <text>)*) {<exp-batch>} end
-
-;;<expression> := (new-obj-exp) Class <text>.new()
-;;             := (new-obj-exp) Class <text>.new(<text> (, <text>)*)
-;;             := (app-method) do <expression>.<text>()
-;;             := (app-method) do <expression>.<text>(<expression> (, <expression>)*)
-;;             := (super-exp) super <text>()
-;;             := (super-exp) super <text>(<expression> (, <expression>)*)
 
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
-
-(let ((time-stamp "Time-Version: 2019-08-28 16:18:14 dfried>"))
-  (eopl:printf " INTERPRETER 3 WITH OBJECTS ~a~%"
-    (substring time-stamp 13 30)))
 
 (define scanner-lexical-specification
   '( (white-sp
@@ -127,7 +111,7 @@
 
 (define grammar-syntatic-specification
   '(
-    (program ( "/" (arbno class-decl) exp-batch  "/") a-program)
+    (program ( "/" exp-batch  "/") a-program)
     (exp-batch ((arbno expression)) a-batch)
     
     (expression (number) lit-number)
@@ -174,39 +158,33 @@
     (binary-op ("or") or-op)
     (binary-op ("||") or-op)
     (binary-op ("..") in-range)
-    
+
     (binaryOct ("+8+") sum8)
     (binaryOct ("-8-") rest8)
     (binaryOct ("*8*") mult8)
     
     (unaryOct ("++8++") plusOne8)
     (unaryOct ("--8--") restOne8)
-    
+
     (binaryHex ("+16+") sum16)
     (binaryHex ("-16-") rest16)
     (binaryHex ("*16*") mult16)
     
     (unaryHex ("++16++") plusOne16)
     (unaryHex ("--16--") restOne16)
-    
+
     (primitiveString (".length") sizeString) 
-    
+
     (assign-op ("=") declarative-opp)
     (assign-op ("+=") add-eq)
     (assign-op ("-=") diff-eq)
     (assign-op ("*=") mult-eq)
     (assign-op ("/=") div-eq)
     (assign-op ("**=") pow-eq)
-    
+
     (unary-op ("not") not-op)
     (unary-op ("!") not-op)
     
-    ;-----------Classes and Objects----------------
-    (class-decl ("class" text "<" text (arbno "@" text) (arbno method-decl) "end") a-class)
-    (method-decl ("def" text "(" (separated-list text ",") ")" "{" exp-batch "}" "end") a-method)
-    (expression ("Class" text ".new(" (separated-list expression ",") ")") new-obj-exp)
-    (expression ("do" expression "." text "(" (separated-list expression ",") ")") app-method)
-    (expression ("super" text "(" (separated-list expression ",") ")") super-exp)
     )
   )
 
@@ -251,10 +229,8 @@
 (define eval-program
   (lambda (pgm)
     (cases program pgm
-      (a-program (classes body)
-                 (elaborate-class-decls! classes)
-                 (eval-batch body (empty-env))
-                 )
+      (a-program (body)
+                 (eval-batch body (init-env)))
       )
     )
   )
@@ -346,7 +322,7 @@
                  (map
                   (lambda (value)
                     (begin
-                      (apply-set-refFor (string->symbol iterator) value env-local)
+                      (apply-set-refFor (string->symbol iterator) (car list-iterator) env-local)
                       (last-of-a-list(eval-batch body env-local))
                       )
                     )
@@ -367,27 +343,21 @@
       (binary16 (exp1 op exp2) (cons "hex" (reverse (applyHex-binary (reverse (cdr (eval-expression exp1 env exps))) (reverse (cdr (eval-expression exp2 env exps))) op))))
       (unary8 (exp1 op) (cons "oct" (reverse (applyOct-unary (reverse (cdr (eval-expression exp1 env exps))) op))))
       (unary16 (exp1 op) (cons "hex" (reverse (applyHex-unary (reverse (cdr (eval-expression exp1 env exps))) op))))
-      (new-obj-exp (idClass rands)
-                   (let ((args (eval-rands rands env exps))
-                         (obj (new-object (string->symbol idClass))))
-                     (find-method-and-apply
-                      'initialize (string->symbol idClass) obj args)
-                     obj))
-      
-      (app-method (idObject idMethod rands)
-                  (let ((args (eval-rands rands env exps))
-                        (obj (eval-expression idObject env empty)))
-                    (find-method-and-apply
-                     (string->symbol idMethod) (object->class-name obj) obj args)))
-      
-      (super-exp (idMethod rands)
-                 (let ((args (eval-rands rands env exps))
-                       (obj (apply-env env 'self)))
-                   (find-method-and-apply
-                    (string->symbol idMethod) (apply-env env '%super) obj args)))
       )
     )
   )
+
+(define print-list
+  (lambda (list)
+    (cond
+      [(not(null? list)) (eopl:pretty-print (car list))
+                         (print-list (cdr list))])
+    )
+  )
+
+
+
+
 
 ;Auxiliary functions to convert lists of strings to lists of symbols
 (define listOfString->listOfSymbols
@@ -437,7 +407,9 @@
   (lambda (exp1 exp2 prim)
     (cases binary-op prim
       (sum () 
-           (if (and (string? exp1) (string? exp2))
+           (if (and
+                (string? exp1)
+                (string? exp2))
                (string-append exp1 exp2)
                (+ exp1 exp2 )
                )
@@ -660,8 +632,8 @@
   (lambda (proc args env)
     (cases procval proc
       (closure (ids body env)
-               (last-of-a-list
-                (eval-batch body (extend-env ids args env ))))
+               (last-of-a-list(eval-batch body (extend-env ids args env )))
+               )
       )
     )
   )
@@ -808,234 +780,13 @@
       )
     )
   )
-
-(define difference
-  (lambda (set1 set2)
-    (cond
-      ((null? set1) '())
-      ((memv (car set1) set2)
-       (difference (cdr set1) set2))
-      (else (cons (car set1) (difference (cdr set1) set2))))))
-
-
-;^; new for ch 5
-(define extend-env-refs
-  (lambda (syms vec env)
-    (extended-env-record syms vec env)))
-
-;^; waiting for 5-4-2.  Brute force code.
-(define list-find-last-position
-  (lambda (sym los)
-    (let loop
-      ((los los) (curpos 0) (lastpos #f))
-      (cond
-        ((null? los) lastpos)
-        ((eqv? sym (car los))
-         (loop (cdr los) (+ curpos 1) curpos))
-        (else (loop (cdr los) (+ curpos 1) lastpos))))))
-
-
-;;;;;;;;;;;;;;;; declarations ;;;;;;;;;;;;;;;;
-
-
-(define class-decl->class-name
-  (lambda (c-decl)
-    (cases class-decl c-decl
-      (a-class (class-name super-name field-ids m-decls)
-               (string->symbol class-name)))))
-
-(define class-decl->super-name
-  (lambda (c-decl)
-    (cases class-decl c-decl
-      (a-class (class-name super-name field-ids m-decls)
-               (string->symbol super-name)))))
-
-(define class-decl->field-ids
-  (lambda (c-decl)
-    (cases class-decl c-decl
-      (a-class (class-name super-name field-ids m-decls)
-               (listOfString->listOfSymbols field-ids)))))
-
-(define class-decl->method-decls
-  (lambda (c-decl)
-    (cases class-decl c-decl
-      (a-class (class-name super-name field-ids m-decls)
-               m-decls))))
-
-(define method-decl->method-name
-  (lambda (md)
-    (cases method-decl md
-      (a-method (method-name ids body)
-                (string->symbol method-name)))))
-
-(define method-decl->ids
-  (lambda (md)
-    (cases method-decl md
-      (a-method (method-name ids body)
-                (listOfString->listOfSymbols ids)))))
-
-(define method-decl->body
-  (lambda (md)
-    (cases method-decl md
-      (a-method (method-name ids body)
-                body))))
-
-(define method-decls->method-names
-  (lambda (mds)
-    (listOfString->listOfSymbols (map method-decl->method-name mds))))
-
-;; evaluar
-(define aux
-  (lambda (x)
-    x))
-
-(define-datatype part part? 
-  (a-part
-   (class-name symbol?)
-   (fields vector?)))
-
-(define new-object
-  (lambda (class-name)
-    (if (eqv? class-name 'object)
-        '()
-        (let ((c-decl (lookup-class class-name)))
-          (cons
-           (make-first-part c-decl)
-           (new-object (class-decl->super-name c-decl)))))))
-
-(define make-first-part
-  (lambda (c-decl)
-    (a-part
-     (class-decl->class-name c-decl)
-     (make-vector (length (class-decl->field-ids c-decl))))))
-
-;;;;;;;;;;;;;;;; methods ;;;;;;;;;;;;;;;;
-
-;;; methods are represented by their declarations.  They are closed
-;;; over their fields at application time, by apply-method.
-
-(define find-method-and-apply
-  (lambda (m-name host-name self args)
-    (if (eqv? host-name 'object)
-        (eopl:error 'find-method-and-apply
-                    "No method for name ~s" m-name)
-        (let ((m-decl (lookup-method-decl m-name
-                                          (class-name->method-decls host-name))))
-          (if (method-decl? m-decl)
-              (apply-method m-decl host-name self args)
-              (find-method-and-apply m-name 
-                                     (class-name->super-name host-name)
-                                     self args))))))
-
-(define view-object-as
-  (lambda (parts class-name)
-    (cond [(eqv? (part->class-name (car parts)) class-name) parts]
-          [else (view-object-as (cdr parts) class-name)])))
-
-(define apply-method
-  (lambda (m-decl host-name self args)
-    (let ((ids (method-decl->ids m-decl))
-          (body (method-decl->body m-decl))
-          (super-name (class-name->super-name host-name)))
-      (last-of-a-list (eval-batch body
-                                  (extend-env
-                                   (cons '%super (cons 'self ids))
-                                   (cons super-name (cons self args))
-                                   (build-field-env 
-                                    (view-object-as self host-name)))))
-      )
-    )
-  )
-
-(define build-field-env
-  (lambda (parts)
-    (if (null? parts)
-        (empty-env)
-        (extend-env-refs
-         (part->field-ids (car parts))
-         (part->fields    (car parts))
-         (build-field-env (cdr parts))))))
-
-;;;;;;;;;;;;;;;; method environments ;;;;;;;;;;;;;;;;
-
-;; find a method in a list of method-decls, else return #f
-
-(define lookup-method-decl 
-  (lambda (m-name m-decls)
-    (cond
-      ((null? m-decls) #f)
-      ((eqv? m-name (method-decl->method-name (car m-decls)))
-       (car m-decls))
-      (else (lookup-method-decl m-name (cdr m-decls))))))
-
-;;;;;;;;;;;;;;;; class environments ;;;;;;;;;;;;;;;;
-
-;;; we'll just use the list of class-decls.
-
-(define the-class-env '())
-
-(define elaborate-class-decls!
-  (lambda (classes)
-    (set! the-class-env classes)))
-
-(define lookup-class
-  (lambda (name)
-    (let loop ((env the-class-env))
-      (cond
-        ((null? env)
-         (eopl:error 'lookup-class
-                     "Unknown class ~s" name))
-        ((eq? (class-decl->class-name (car env)) name) (car env))
-        (else (loop (cdr env)))))))
-
-;;;;;;;;;;;;;;;; selectors of all sorts ;;;;;;;;;;;;;;;;
-
-(define part->class-name
-  (lambda (prt)
-    (cases part prt
-      (a-part (class-name fields)
-              class-name))))
-
-(define part->fields
-  (lambda (prt)
-    (cases part prt
-      (a-part (class-name fields) fields))))
-
-(define part->field-ids
-  (lambda (part)
-    (class-decl->field-ids (part->class-decl part))))
-
-(define part->class-decl
-  (lambda (part)
-    (lookup-class (part->class-name part))))
-
-(define part->method-decls
-  (lambda (part)
-    (class-decl->method-decls (part->class-decl part))))
-
-(define part->super-name
-  (lambda (part)
-    (class-decl->super-name (part->class-decl part))))
-
-(define class-name->method-decls
-  (lambda (class-name)
-    (class-decl->method-decls (lookup-class class-name))))
-
-(define class-name->super-name
-  (lambda (class-name)
-    (class-decl->super-name (lookup-class class-name))))
-
-(define object->class-name
-  (lambda (parts)
-    (part->class-name (car parts))))
-
-
 ;auxiliary function that returns the last of a list
 (define last-of-a-list
   (lambda (list)
     (cond
       [(null? list) empty]
       [else  (car (reverse list))])))
+
 
 (interpreter)
 
@@ -1114,49 +865,39 @@
 ;a
 ;/
 
-
-;Objetos Ejemplo Incierto
+;Aplicado con listas, recursion y suma  
 ;/
-;class clase1 < object
-;@a
-;@b
-;@c
-;def initialize(m, n, r)
+;def sum (a)
 ;{
-;$a=m;
-;$b=n;
-;$c=r;
+;if (a==8) then
+;{
+;8
+;}
+;else
+;{
+;{sum ((a+ 1))}
 ;}
 ;end
-;def getValor()
-;{
-;a
 ;}
 ;end
-;def incierto()
-;{
-;do self.getValor()
-;}
-;end
-;end
-;class clase2 < clase1
-;@e
-;@f
-;def initialize(t, m)
-;{
-;super initialize(1, 2 ,3)
-;$e=t;
-;$f=m;
-;}
-;end
-;def getValor()
-;{
-;1200
-;}
-;end
-;end
-;$o2 = Class clase2.new(1, 2);
-;do o2.incierto()
+;(1+{sum (6)})
 ;/
 
-;Prueba objetos gatito
+; Factorial 
+;/
+;def fact (a)
+;{
+;if ( (a==0) || (a==1)) then
+;{
+;1
+;}
+;else
+;{
+;(a * {fact ((a- 1))} )
+;}
+;end
+;}
+;end
+;{fact (5)}
+;/
+
