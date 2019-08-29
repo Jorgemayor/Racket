@@ -1,7 +1,7 @@
 #lang eopl
 ; Proyecto Fundamentos de lenguaje de programacion
 ; 
-; 201738661-201744936 - Interpretador Basico I
+; 201738661-201744936 - Interpretador Basico III
 ; 
 ; Developers:
 ; 
@@ -1101,4 +1101,49 @@
 ;}
 ;end
 ;a
+;/
+
+
+;Incierto
+;/
+;class clase1 < object
+;@a
+;@b
+;@c
+;def initialize(m, n, r)
+;{
+;$a=m;
+;$b=n;
+;$c=r;
+;}
+;end
+;def getValor()
+;{
+;a
+;}
+;end
+;def incierto()
+;{
+;do self.getValor()
+;}
+;end
+;end
+;class clase2 < clase1
+;@e
+;@f
+;def initialize(t, m)
+;{
+;super initialize(1, 2 ,3)
+;$e=t;
+;$f=m;
+;}
+;end
+;def getValor()
+;{
+;1200
+;}
+;end
+;end
+;$o2 = Class clase2.new(1, 2);
+;do o2.incierto()
 ;/
