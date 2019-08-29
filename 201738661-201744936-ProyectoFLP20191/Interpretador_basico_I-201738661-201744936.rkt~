@@ -1,5 +1,5 @@
 #lang eopl
-; TITULO
+; Proyecto Fundamentos de lenguaje de programacion
 ; 
 ; 201738661-201744936 - Interpretador Basico I
 ; 
@@ -12,9 +12,10 @@
 ; Code: 201744936
 ;
 ;-------------------------------------------------------------------------------
-;;<program> := (a-program) / <exp-batch> /
+;;<program> := (a-program) < / exp-batch />
 
 ;;<exp-batch>:= (a-batch) (expression)*
+
 
 ;;<expression> := (lit-number) <number>
 ;;             := (lit-id) <text>
@@ -22,6 +23,8 @@
 ;;             := (true-val) true
 ;;             := (false-val) false
 ;;             := (empty-val) nil
+;;             := (expHex) <expressionHex>
+;;             := (expOct) <expressionOct>
 ;;             := (set-dec-exp) $ <letters> <assign-op> <expression> ;
 ;;             := (unary-expression) <unary-op> <expression> ;
 ;;             := (condicional-exp) if <expression> then { <exp-batch> }
@@ -31,16 +34,15 @@
 ;;             := (primitive-exp) (<expression> <binary-op> <expression>)
 ;;             := (expPrimitiveString) [<expression> <primitiveString>]
 ;;             := (for-exp) for <text> in <expression> .. <expression> { <exp-batch> } end
-;;             := (proc-exp) def <text> () { <exp-batch> } end
-;;             := (proc-exp) def <text> (<text> {, <text>}*)  { <exp-batch> } end
-;;             := (evalProc-exp) { <expression> () }
-;;             := (evalProc-exp) { <expression> (<expression> {, <expression>}* ) }
-;;             := (binary8) bin8 <expression> <binaryOct> <expression>;
-;;             := (unary8)un8 <expression> <unaryOct> ;
-;;             := (binary16) prim16 <expression> <binaryHex> <expression>;
-;;             := (unary16) un16 <expression> <unaryHex> ;
-;;             := (hex-number) (hex number {, number}*)
-;;             := (oct-number) (oct number {, number}*)
+;;             := (proc-exp) def <text> (<text>) {, <text>}* { <exp-batch> } end
+;;             := (evalProc-exp) { <text> (<expression>) {, expression}* }
+;;             := (binary8) prim8 <expressionOct> <binaryOct> <expressionOct>;
+;; (expression := (unary8)un8 <expressionOct> <unaryOct> ;
+;;             := (binary16) prim16 <expressionHex> <binaryHex> <expressionHex>;
+;;             := (unary16) un16 <expressionHex> <unaryHex> ;
+
+;; <expressionHex> := (hex-number) (hex number {, number}*)
+;; <expressionOct> := (oct-number) (oct number {, number}*)
 
 ;;<binary-op> := (sum) +
 ;;            := (subd) -
@@ -61,16 +63,16 @@
 ;;            := (in-range) ..
 
 ;;<binaryOct>  := (sum8) +8+
-;;             := (rest8) -8-
-;;             := (mult8) *8*
-;;             := (plusOne8) ++8++
-;;             := (restOne8) --8--
+;;                := (rest8) -8-
+;;                := (mult8) *8*
+;;                := (plusOne8) ++8++
+;;                := (restOne8) --8--
 
 ;;<binaryHex>  := (sum16) +16+
-;;             := (rest16) -16-
-;;             := (mult16) *16*
-;;             := (plusOne16) ++16++
-;;             := (restOne16) --16--
+;;                := (rest16) -16-
+;;                := (mult16) *16*
+;;                := (plusOne16) ++16++
+;;                := (restOne16) --16--
 
 ;;<primitiveString>  := (sizeString) .length
 
@@ -87,10 +89,6 @@
 
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
-
-(let ((time-stamp "Time-Version: 2019-08-28 16:18:14 dfried>"))
-  (eopl:printf " INTERPRETER 1 ~a~%"
-    (substring time-stamp 13 30)))
 
 (define scanner-lexical-specification
   '( (white-sp
@@ -117,6 +115,8 @@
     (exp-batch ((arbno expression)) a-batch)
     
     (expression (number) lit-number)
+    ;(expression (expressionHex) expHex); change gramatic
+    ;(expression (expressionOct) expOct); change gramatic
     (expression (text) lit-id)
     (expression ("\"" text "\"") lit-text)
     (expression ("true") true-val)
@@ -126,20 +126,20 @@
     (expression (unary-op expression ";") unary-expression)
     (expression ("if" expression "then" "{" exp-batch "}"
                       (arbno "elsif" expression "then" "{" exp-batch "}")
-                      "else" "{" exp-batch "}" "end") condicional-exp)
+                      "else" "{" exp-batch "}" "end") condicional-exp) ;change in gramatic
     (expression ("puts" (separated-list expression ",") ";") print-expression)
     (expression ("(" expression binary-op expression ")") primitive-exp)
     (expression ("[" expression primitiveString "]") expPrimitiveString)
-    (expression ("for" text "in" expression ".." expression "{"exp-batch"}" "end") for-exp)
+    (expression ("for" text "in" expression ".." expression "{"exp-batch"}" "end") for-exp) ;change in gramatic
     (expression ("def" text "(" (separated-list text ",") ")" "{"exp-batch"}" "end") proc-exp)
-    (expression ("{" expression "(" (separated-list expression ",") ")" "}") evalProc-exp)
-    (expression ("bin8" expression binaryOct expression ";") binary8)
-    (expression ("un8" expression unaryOct ";") unary8)
-    (expression ("bin16" expression binaryHex expression ";") binary16)
-    (expression ("un16" expression unaryHex ";") unary16)
+    (expression ("{" expression "(" (separated-list expression ",") ")" "}") evalProc-exp) ; revision
+    (expression ("bin8" expression binaryOct expression ";") binary8) ; change gramatic
+    (expression ("un8" expression unaryOct ";") unary8) ; change gramatic
+    (expression ("bin16" expression binaryHex expression ";") binary16) ; change gramatic
+    (expression ("un16" expression unaryHex ";") unary16)  ; change gramatic
     
-    (expression ("(hex"  (separated-list number "," )  ")") hex-number )
-    (expression ( "(oct" (separated-list number ",") ")") oct-number )
+    (expression ("(hex"  (separated-list number "," )  ")") hex-number ) ; change gramatic
+    (expression ( "(oct" (separated-list number ",") ")") oct-number ) ; change gramatic
     
     (binary-op ("+") sum)
     (binary-op ("-") subd)
@@ -240,15 +240,10 @@
   (lambda ()
     (empty-env)))
 
-;true-value?
-;determines whether a given value corresponds to a false or true Boolean value
+;valor-verdad? determines whether a given value corresponds to a false or true Boolean value
 (define true-value? (lambda (x) #t))
 
-;eval-batch
-;A batch is set of espressions that are evaluated each one of them and their
-;values are stored in a list, that is returned to eval-program.
-;This function takes every expression of the batch given and makes the corresponding
-;procedure with them.
+;eval-exp-batch:
 (define (eval-batch batch env)
   (cases exp-batch batch
     (a-batch (exps)
@@ -278,6 +273,12 @@
     )
   )
 
+(define aux-print
+  (lambda (toPrint env)
+    (eopl:pretty-print (eval-expression (car toPrint) env (cdr toPrint)))
+    (eval-batch (a-batch (cdr toPrint)) env)
+    )
+  )
 
 ;eval-expression: <expresion> <ambiente>-> number || string || cerradura
 ; Purpose: Evaluate the expression using cases to determine which datatype is,
@@ -302,7 +303,7 @@
                            )                                                                                                                    
                        )
       (print-expression (listExps)
-                        (last-of-a-list(eval-batch(a-batch listExps) env)))
+                        (last-of-a-list(eval-batch(a-batch listExps) env))); falta revisar los voids
       (primitive-exp (exp1 op exp2)
                      (let ((value1 (eval-expression exp1 env empty))
                            (value2 (eval-expression exp2 env empty))
@@ -321,7 +322,7 @@
                  (map
                   (lambda (value)
                     (begin
-                      (apply-set-refFor (string->symbol iterator) value env-local)
+                      (apply-set-refFor (string->symbol iterator) (car list-iterator) env-local)
                       (last-of-a-list(eval-batch body env-local))
                       )
                     )
@@ -345,6 +346,16 @@
       )
     )
   )
+
+(define print-list
+  (lambda (list)
+    (cond
+      [(not(null? list)) (eopl:pretty-print (car list))
+                         (print-list (cdr list))])
+    )
+  )
+
+
 
 
 
@@ -560,7 +571,7 @@
 
 ;*******************************************************************************************
 ;*******************************************************************************************
-;References
+;Referencias
 (define-datatype reference reference?
   (a-ref (position integer?)
          (vec vector?)))
@@ -596,7 +607,7 @@
 ;*******************************************************************************************
 ;Datatypes
 
-;Environment datatype
+;definición del tipo de dato ambiente
 (define-datatype environment environment?
   (empty-env-record)
   (extended-env-record
@@ -616,7 +627,7 @@
    (body exp-batch?)
    (env environment?)))
 
-;apply-procedure: evaluates the body of a producedure on the correspnding extended environment
+;apply-procedure: evalua el cuerpo de un procedimientos en el ambiente extendido correspondiente
 (define apply-procedure
   (lambda (proc args env)
     (cases procval proc
@@ -626,8 +637,8 @@
       )
     )
   )
+;; Evalua el cuerpo de expresiones siguientes
 
-;;Evaluates the rest of the expressions
 (define apply-procedureExps
   (lambda (id body exps env)
     (eval-expression (car exps) (extend-env id body env) (cdr exps))
@@ -638,7 +649,7 @@
 (define scheme-value? (lambda (v) #t))
 
 ;*******************************************************************************************
-;Environments
+;Ambientes
 
 (define empty-env  
   (lambda ()
@@ -653,7 +664,7 @@
   )
 
 ;extend-env-recursively: <list-of symbols> <list-of <list-of symbols>> <list-of expressions> environment -> environment
-;Creates an entended environment for recursive procedures
+;función que crea un ambiente extendido para procedimientos recursivos
 (define (extend-env-recursively a-proc-name ids body env)
   (let ((vec (make-vector 1)))
     (let ((env (recursively-extended-env-record a-proc-name ids body env)))
@@ -679,7 +690,7 @@
   )
 
 ;iota: number -> list
-;Returns a list from 1 to end
+;función que retorna una lista de los números desde 0 hasta end
 (define iota
   (lambda (end)
     (let loop ((next 0))
@@ -690,7 +701,7 @@
     )
   )
 
-;Function that searches a symbol on the environment
+;función que busca un símbolo en un ambiente
 (define apply-env
   (lambda (env sym)
     (let ([result-ref (apply-env-ref env sym)])
@@ -723,7 +734,7 @@
     )
   )
 
-;apply-set-ref: asign a value to an id
+;apply-set-ref: asigna un valor a un id
 (define apply-set-ref
   (lambda (id value env exps)
     (let ([result-ref (apply-env-ref env id)])
@@ -779,10 +790,10 @@
 
 (interpreter)
 
-;---------------------------------------------------------
-;TESTS
-;---------------------------------------------------------
-;Test 1
+
+;PRUEBAS
+
+;Prueba definiciones alcance de variables
 ;/
 ;$b=3;
 ;
@@ -803,7 +814,7 @@
 ;
 ;/
 
-;Test 2
+;Prueba definiciones simple
 ; /
 ;def sum (a)
 ;{
@@ -821,7 +832,7 @@
 ;{sum (6)}
 ;/
 
-;Test 3 for
+;PRUEBA FOR
 ;/
 ;for i in 1..6 {
 ;puts 2;
@@ -829,7 +840,7 @@
 ;end
 ;/
 
-;Test 4 if
+;PRUEBA DEL IF
 ; /
 ;$a=1;
 ;if((a+2)==3) then {
@@ -854,7 +865,7 @@
 ;a
 ;/
 
-; Test 5 proc 
+;Aplicado con listas, recursion y suma  
 ;/
 ;def sum (a)
 ;{
@@ -872,7 +883,7 @@
 ;(1+{sum (6)})
 ;/
 
-; Test 6 Proc Factorial of a number
+; Factorial 
 ;/
 ;def fact (a)
 ;{
@@ -890,23 +901,3 @@
 ;{fact (5)}
 ;/
 
-
-; Test 7 Fibonacci
-;/
-;def fibo(i){
-;if((i==1) or (i==0)) then
-;{
-;1
-;}
-;else
-;{
-;({fibo((i- 1))} + {fibo((i- 2))})
-;}
-;end
-;}
-;end
-;for i in 1 .. 5{
-;{fibo(i)}
-;}
-;end
-;/
