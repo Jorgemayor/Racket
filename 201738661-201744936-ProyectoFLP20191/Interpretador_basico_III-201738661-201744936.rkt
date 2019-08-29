@@ -1,5 +1,5 @@
 #lang eopl
-; Proyecto Fundamentos de lenguaje de programacion
+; Project Essentials of programming languages
 ; 
 ; 201738661-201744936 - Interpretador Basico III
 ; 
@@ -1114,49 +1114,110 @@
 ;a
 ;/
 
-
 ;Objetos Ejemplo Incierto
 ;/
 ;class clase1 < object
-;@a
-;@b
-;@c
-;def initialize(m, n, r)
-;{
-;$a=m;
-;$b=n;
-;$c=r;
-;}
+;
+;	@a
+;	@b
+;	@c
+;	
+;	def initialize(m, n, r)
+;	{
+;		$a=m;
+;		$b=n;
+;		$c=r;
+;	}
+;	end
+;	
+;	def getValor()
+;	{
+;		a
+;	}
+;	end
+;	
+;	def incierto()
+;	{
+;		do self.getValor()
+;	}
+;	end
 ;end
-;def getValor()
-;{
-;a
-;}
-;end
-;def incierto()
-;{
-;do self.getValor()
-;}
-;end
-;end
+;	
 ;class clase2 < clase1
-;@e
-;@f
-;def initialize(t, m)
-;{
-;super initialize(1, 2 ,3)
-;$e=t;
-;$f=m;
-;}
-;end
-;def getValor()
-;{
-;1200
-;}
-;end
+;
+;	@e
+;	@f
+;	
+;	def initialize(t, m)
+;	{
+;		super initialize(1, 2 ,3)
+;		$e=t;
+;		$f=m;
+;	}
+;	end
+;	
+;	def getValor()
+;	{
+;		1200
+;	}
+;	end
 ;end
 ;$o2 = Class clase2.new(1, 2);
 ;do o2.incierto()
 ;/
 
 ;Prueba objetos gatito
+;/
+;class gatito < object
+;
+;	@felicidad
+;
+;	def initialize()
+;	{
+;		$felicidad = 100;
+;	}
+;	end
+;
+;	def getFelidad()
+;	{
+;		felicidad
+;	}
+;	end
+;
+;	def aumentarFelicidad()
+;	{
+;		$felicidad +=5;
+;	}
+;	end
+;
+;	def bajarFelicidad()
+;	{
+;		$felicidad -=5;
+;	}
+;	end
+;end
+;
+;class humano < object
+;
+;	def initialize()
+;	{}
+;	end
+;
+;	def acariciar(objGato)
+;	{
+;		do objGato.aumentarFelicidad()
+;	}
+;	end
+;
+;	def pegar(objGato)
+;	{
+;		do objGato.bajarFelicidad()
+;	}
+;	end
+;end
+;
+;$michi = Class gatito.new();
+;$cesaru = Class humano.new();
+;do cesaru.acariciar(michi)
+;do michi.getFelidad()
+;/
