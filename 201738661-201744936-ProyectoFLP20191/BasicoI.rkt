@@ -1,7 +1,7 @@
 #lang eopl
-; Proyecto Fundamentos de lenguaje de programacion
+; Project of Essentials of Programming Languages
 ; 
-; 201738661-201744936 - Interpretador Basico I
+; 201738661-201744936 - Basic interpreter I
 ; 
 ; Developers:
 ; 
@@ -89,7 +89,7 @@
 ;-------------------------------------------------------------------------------
 
 (let ((time-stamp "Time-Version: 2019-08-28 16:18:14 dfried>"))
-  (eopl:printf " INTERPRETER 2 WITH CHECK OF TYPES ~a~%"
+  (eopl:printf " INTERPRETER 1 ~a~%"
     (substring time-stamp 13 30)))
 
 (define scanner-lexical-specification
@@ -278,12 +278,6 @@
     )
   )
 
-(define aux-print
-  (lambda (toPrint env)
-    (eopl:pretty-print (eval-expression (car toPrint) env (cdr toPrint)))
-    (eval-batch (a-batch (cdr toPrint)) env)
-    )
-  )
 
 ;eval-expression: <expresion> <ambiente>-> number || string || cerradura
 ; Purpose: Evaluate the expression using cases to determine which datatype is,
@@ -308,7 +302,7 @@
                            )                                                                                                                    
                        )
       (print-expression (listExps)
-                        (last-of-a-list(eval-batch(a-batch listExps) env))); falta revisar los voids
+                        (last-of-a-list(eval-batch(a-batch listExps) env)))
       (primitive-exp (exp1 op exp2)
                      (let ((value1 (eval-expression exp1 env empty))
                            (value2 (eval-expression exp2 env empty))
@@ -352,13 +346,7 @@
     )
   )
 
-(define print-list
-  (lambda (list)
-    (cond
-      [(not(null? list)) (eopl:pretty-print (car list))
-                         (print-list (cdr list))])
-    )
-  )
+
 
 ;Auxiliary functions to convert lists of strings to lists of symbols
 (define listOfString->listOfSymbols
@@ -791,10 +779,10 @@
 
 (interpreter)
 
-
-;Tests
-
-;Prueba definiciones alcance de variables
+;---------------------------------------------------------
+;TESTS
+;---------------------------------------------------------
+;Test 1
 ;/
 ;$b=3;
 ;
@@ -815,7 +803,7 @@
 ;
 ;/
 
-;Prueba definiciones simple
+;Test 2
 ; /
 ;def sum (a)
 ;{
@@ -833,7 +821,7 @@
 ;{sum (6)}
 ;/
 
-;PRUEBA FOR
+;Test 3 for
 ;/
 ;for i in 1..6 {
 ;puts 2;
@@ -841,7 +829,7 @@
 ;end
 ;/
 
-;PRUEBA DEL IF
+;Test 4 if
 ; /
 ;$a=1;
 ;if((a+2)==3) then {
@@ -866,7 +854,7 @@
 ;a
 ;/
 
-;Aplicado con listas, recursion y suma  
+; Test 5 proc 
 ;/
 ;def sum (a)
 ;{
@@ -884,7 +872,7 @@
 ;(1+{sum (6)})
 ;/
 
-; Factorial 
+; Test 6 Proc Factorial of a number
 ;/
 ;def fact (a)
 ;{
@@ -903,7 +891,7 @@
 ;/
 
 
-;Fibonacci
+; Test 7 Fibonacci
 ;/
 ;def fibo(i){
 ;if((i==1) or (i==0)) then
